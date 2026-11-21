@@ -1,0 +1,58 @@
+name: desktop
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - name: Scanner tests
+        run: npm test
+
+      - name: Build and package (unsigned)
+        run: npm run dist -w @agent-forge/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Smoke test packaged app
+        if: runner.os != 'Linux'
+        run: node apps/desktop/scripts/smoke.mjs --packaged
+
+      # Ubuntu 24.04 restricts unprivileged user namespaces, which Chromium's
+      # sandbox needs; CI-only workaround. Xvfb provides a display.
+      - name: Smoke test packaged app (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node apps/desktop/scripts/smoke.mjs --packaged --no-sandbox
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: agent-forge-${{ runner.os }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.AppImage
+          if-no-files-found: error
+          retention-days: 7

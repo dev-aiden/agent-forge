@@ -1,0 +1,28 @@
+# Packaging config. Code signing / notarization and auto-update come later.
+appId: io.github.devaiden.agentforge
+productName: Agent Forge
+copyright: Copyright (c) 2026 dev-aiden
+directories:
+  output: release
+  buildResources: build
+# Everything the app needs is bundled into out/ by electron-vite.
+files:
+  - out/**/*
+  - package.json
+asar: true
+npmRebuild: false
+artifactName: agent-forge-${version}-${os}-${arch}.${ext}
+mac:
+  target: dmg
+  category: public.app-category.developer-tools
+  identity: null
+win:
+  target: nsis
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+linux:
+  target: AppImage
+  executableName: agent-forge
+  category: Development
+publish: null
