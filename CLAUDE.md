@@ -32,11 +32,13 @@
 - 렌더러는 Node 접근 없이(contextIsolation) preload로 노출한 API만 쓴다.
 
 ## 현재 단계와 다음 작업
-- 지금: 1주차 — 조사와 뼈대
-- 다음: `packages/adapters/scripts/scan.ts` (읽기 전용) — 이 컴퓨터에서 4개 도구의 규칙·에이전트·스킬·MCP 설정 파일 경로와 형식을 찾아 표로 출력
-- rulesync를 라이브러리로 쓸 수 있는지(라이선스, 프로그램 API) 조사해서 요약
-- Electron 빈 앱이 맥·윈도우에서 뜨는지 확인
-- 그다음: 2주차 — 공통 데이터 구조 + Claude Code·Codex 어댑터(읽기), 설정 한눈에 보기 화면
+- 지금: 2주차 — 공통 데이터 구조 + Claude Code·Codex 어댑터(읽기), 설정 한눈에 보기 화면
+- 1주차 완료:
+  - `npm run scan` — 4개 도구 설정 경로·형식 스캐너 (`packages/adapters/scripts/scan.ts`)
+  - rulesync 조사 — `docs/ko/rulesync-research.md` (MIT, 라이브러리 사용 가능. 임시 폴더 생성 → diff → 백업 후 적용 방식으로 감싼다)
+  - Electron 빈 앱 — `apps/desktop`, CI(`.github/workflows/desktop.yml`)에서 macOS·Windows·Linux 패키지 앱 스모크 테스트 통과
+- 확인 필요: Codex·Copilot·Antigravity는 이 컴퓨터에 설치되어 있지 않아 경로를 가짜 파일로만 검증했다 (`paths.ts`의 "unverified path")
+- 저장소: https://github.com/dev-aiden/agent-forge (공개). 커밋 작성자 이메일은 GitHub noreply 주소를 쓴다
 
 ## 작업 방식
 - 기능 하나씩, 플랜을 먼저 보여주고 승인 후 구현
