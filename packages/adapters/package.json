@@ -3,5 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@agent-forge/model": "^0.0.0",
+    "smol-toml": "^1.9.1",
+    "yaml": "^2.9.1"
+  },
+  "main": "index.ts",
+  "types": "index.ts"
 }

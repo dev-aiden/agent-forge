@@ -1,0 +1,165 @@
+// Common data model for rules, agents, skills and MCP servers across all tools.
+//
+// Field names follow the rulesync source format (name, description, targets,
+// root, globs) so app-managed items can later be exported to a `.rulesync/`
+// tree and handed to rulesync for generation.
+
+export type ToolId = "claude" | "codex" | "copilot" | "antigravity";
+
+export const TOOL_IDS: readonly ToolId[] = ["claude", "codex", "copilot", "antigravity"];
+
+/** rulesync target name for each tool. */
+export const RULESYNC_TARGET: Record<ToolId, string> = {
+  claude: "claudecode",
+  codex: "codexcli",
+  copilot: "copilotcli",
+  antigravity: "antigravity-cli",
+};
+
+/**
+ * global  — user-wide (~/...)
+ * project — checked into a project directory
+ * local   — project-specific but private to this user (e.g. CLAUDE.local.md,
+ *           per-project MCP servers stored in ~/.claude.json)
+ */
+export type Scope = "global" | "project" | "local";
+
+export type SourceFormat = "markdown" | "json" | "toml";
+
+/** Where an item was read from. */
+export interface Source {
+  tool: ToolId;
+  scope: Scope;
+  /** Absolute path of the file holding the item. */
+  path: string;
+  format: SourceFormat;
+  /** False when the location is not confirmed by the tool's docs yet. */
+  verified: boolean;
+}
+
+interface ItemBase {
+  /** Stable id: `<tool>:<path>` plus `#<name>` for items inside a shared file. */
+  id: string;
+  name: string;
+  description?: string;
+  source: Source;
+}
+
+export interface Rule extends ItemBase {
+  kind: "rule";
+  body: string;
+  /** True for the top-level instruction file (CLAUDE.md, AGENTS.md...). */
+  root: boolean;
+  /** File patterns the rule applies to, when the tool supports scoping. */
+  globs?: string[];
+}
+
+export interface Agent extends ItemBase {
+  kind: "agent";
+  /** System prompt / instructions. */
+  body: string;
+  model?: string;
+  tools?: string[];
+  /** Tool-specific fields kept as-is so nothing is lost on round-trip. */
+  extra: Record<string, unknown>;
+}
+
+export interface Skill extends ItemBase {
+  kind: "skill";
+  /** SKILL.md body (without frontmatter). */
+  body: string;
+  /** Other files bundled with the skill, relative to the skill directory. */
+  files: string[];
+  extra: Record<string, unknown>;
+}
+
+export type McpTransport = "stdio" | "http" | "sse";
+
+export interface McpServer extends ItemBase {
+  kind: "mcp";
+  transport: McpTransport;
+  command?: string;
+  args?: string[];
+  /** May contain secrets. Mask before sending anywhere (see maskMcpServer). */
+  env?: Record<string, string>;
+  url?: string;
+  /** May contain secrets. Mask before sending anywhere (see maskMcpServer). */
+  headers?: Record<string, string>;
+  enabled: boolean;
+  extra: Record<string, unknown>;
+}
+
+export type Item = Rule | Agent | Skill | McpServer;
+
+/** A problem found while reading (unparseable file, unexpected shape...). */
+export interface ReadIssue {
+  path: string;
+  message: string;
+}
+
+/** Everything read from one tool. */
+export interface ToolConfig {
+  tool: ToolId;
+  rules: Rule[];
+  agents: Agent[];
+  skills: Skill[];
+  mcpServers: McpServer[];
+  issues: ReadIssue[];
+}
+
+export const MASK = "••••";
+
+const SECRET_NAME = /(key|token|secret|password|passwd|auth|credential|bearer|cookie|session)/i;
+
+function maskArgs(args?: string[]): string[] | undefined {
+  if (!args) return undefined;
+  return args.map((arg, i) => {
+    // --api-key=xxx
+    const eq = arg.match(/^(-{1,2}[^=]+)=(.*)$/);
+    if (eq && SECRET_NAME.test(eq[1])) return `${eq[1]}=${MASK}`;
+    // --api-key xxx
+    const prev = args[i - 1];
+    if (prev && /^-{1,2}[^=]+$/.test(prev) && SECRET_NAME.test(prev) && !arg.startsWith("-")) return MASK;
+    return arg;
+  });
+}
+
+function maskUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  try {
+    const u = new URL(url);
+    if (u.username || u.password) {
+      u.username = u.username ? MASK : "";
+      u.password = u.password ? MASK : "";
+    }
+    for (const k of [...u.searchParams.keys()]) u.searchParams.set(k, MASK);
+    return u.toString().replaceAll(encodeURIComponent(MASK), MASK);
+  } catch {
+    return MASK;
+  }
+}
+
+/**
+ * Hides values that may be secrets, keeping structure and key names:
+ * env / header values, secret-looking CLI args, URL credentials and query
+ * values, and string values in tool-specific extra fields.
+ */
+export function maskMcpServer(server: McpServer): McpServer {
+  const maskRecord = (r?: Record<string, string>) =>
+    r ? Object.fromEntries(Object.keys(r).map((k) => [k, MASK])) : undefined;
+  const extra = Object.fromEntries(
+    Object.entries(server.extra).map(([k, v]) => [k, typeof v === "number" || typeof v === "boolean" ? v : MASK]),
+  );
+  return {
+    ...server,
+    args: maskArgs(server.args),
+    env: maskRecord(server.env),
+    headers: maskRecord(server.headers),
+    url: maskUrl(server.url),
+    extra,
+  };
+}
+
+export function maskToolConfig(config: ToolConfig): ToolConfig {
+  return { ...config, mcpServers: config.mcpServers.map(maskMcpServer) };
+}

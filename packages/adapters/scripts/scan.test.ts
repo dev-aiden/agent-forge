@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { formatText, scan, type ScanResult } from "./scan";
+import { formatText, scan, type ScanResult } from "../scan";
 
 const SECRET = "SECRET_TOKEN_DO_NOT_PRINT";
 const EMAIL = "leak@example.invalid";

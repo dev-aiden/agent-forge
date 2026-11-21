@@ -9,10 +9,11 @@
   ],
   "scripts": {
     "scan": "tsx packages/adapters/scripts/scan.ts",
-    "test": "tsx --test packages/adapters/scripts/*.test.ts",
+    "test": "tsx --test \"packages/**/*.test.ts\"",
     "typecheck": "tsc --noEmit && npm run typecheck -w @agent-forge/desktop",
     "dev": "npm run dev -w @agent-forge/desktop",
-    "smoke": "npm run smoke -w @agent-forge/desktop"
+    "smoke": "npm run smoke -w @agent-forge/desktop",
+    "read": "tsx packages/adapters/scripts/read.ts"
   },
   "engines": {
     "node": ">=22"

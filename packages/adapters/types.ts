@@ -1,6 +1,7 @@
 // Shared types for adapter path definitions and the read-only scanner.
+import type { Scope, ToolId } from "@agent-forge/model";
 
-export type ToolId = "claude" | "codex" | "copilot" | "antigravity";
+export type { Scope, ToolId };
 
 export type Kind =
   | "rules"
@@ -11,8 +12,6 @@ export type Kind =
   | "hooks"
   | "settings"
   | "plugins";
-
-export type Scope = "global" | "project";
 
 export type Format = "markdown" | "json" | "toml" | "mixed";
 
