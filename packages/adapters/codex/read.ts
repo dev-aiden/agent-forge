@@ -72,26 +72,32 @@ export async function readCodex(ctx: PathContext): Promise<ToolConfig> {
   const { global: g, project: p } = codexPaths(ctx);
 
   // Codex prefers AGENTS.override.md over AGENTS.md in the same directory; both are listed.
+  // Project scope is skipped when no project is selected.
+  const hasProject = ctx.project !== "";
+
   const rules = (
     await Promise.all([
       readRootRule(r, g.overrideRulesFile, { ...md, scope: "global" }),
       readRootRule(r, g.rulesFile, { ...md, scope: "global" }),
-      readRootRule(r, p.overrideRulesFile, { ...md, scope: "project" }),
-      readRootRule(r, p.rulesFile, { ...md, scope: "project" }),
+      hasProject ? readRootRule(r, p.overrideRulesFile, { ...md, scope: "project" }) : null,
+      hasProject ? readRootRule(r, p.rulesFile, { ...md, scope: "project" }) : null,
     ])
   ).filter((x): x is Rule => x !== null);
 
-  const agents = [...(await readTomlAgents(r, g.agentsDir, "global")), ...(await readTomlAgents(r, p.agentsDir, "project"))];
+  const agents = [
+    ...(await readTomlAgents(r, g.agentsDir, "global")),
+    ...(hasProject ? await readTomlAgents(r, p.agentsDir, "project") : []),
+  ];
 
   const skills = [
     ...(await readSkillsDir(r, g.skillsDir, { ...md, scope: "global" })),
     ...(await readSkillsDir(r, g.legacySkillsDir, { ...md, scope: "global" }, { extra: { legacyLocation: true } })),
-    ...(await readSkillsDir(r, p.skillsDir, { ...md, scope: "project" })),
+    ...(hasProject ? await readSkillsDir(r, p.skillsDir, { ...md, scope: "project" }) : []),
   ];
 
   const mcpServers = [
     ...serversFromToml(await r.toml(g.config), source("codex", "global", g.config, "toml")),
-    ...serversFromToml(await r.toml(p.config), source("codex", "project", p.config, "toml")),
+    ...(hasProject ? serversFromToml(await r.toml(p.config), source("codex", "project", p.config, "toml")) : []),
   ];
 
   return {

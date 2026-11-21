@@ -199,7 +199,9 @@ export async function scan(ctx: PathContext, tools: ToolDefinition[] = TOOLS): P
   const summaries: ToolSummary[] = [];
 
   for (const tool of tools) {
-    const results = await Promise.all(tool.candidates(ctx).map((c) => scanCandidate(c, sensitive)));
+    // Without a project, project/local candidates would resolve relative to the cwd: skip them.
+    const candidates = tool.candidates(ctx).filter((c) => ctx.project || c.scope === "global");
+    const results = await Promise.all(candidates.map((c) => scanCandidate(c, sensitive)));
     entries.push(...results);
     const binary = await findBinary(tool.binaries, ctx.env);
     const found = results.filter((r) => r.status === "found").length;

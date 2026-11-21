@@ -52,6 +52,7 @@ export interface Candidate {
 
 export interface PathContext {
   home: string;
+  /** Absolute project directory, or "" when no project is selected (project scope is skipped). */
   project: string;
   env: Record<string, string | undefined>;
 }

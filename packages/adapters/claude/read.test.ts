@@ -110,3 +110,10 @@ test("reads MCP servers from user, local and project scope only", () => {
 test("never surfaces account info from ~/.claude.json", () => {
   assert.ok(!JSON.stringify(config).includes("someone@example.invalid"));
 });
+
+test("skips project and local scope when no project is selected", async () => {
+  const global = await readClaude({ home, project: "", env: {} });
+  const items = [...global.rules, ...global.agents, ...global.skills, ...global.mcpServers];
+  assert.ok(items.length > 0);
+  assert.ok(items.every((i) => i.source.scope === "global"), "only global items expected");
+});

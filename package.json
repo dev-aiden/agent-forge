@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "scan": "tsx packages/adapters/scripts/scan.ts",
-    "test": "tsx --test \"packages/**/*.test.ts\"",
+    "test": "tsx --test \"packages/**/*.test.ts\" \"apps/desktop/main/*.test.ts\"",
     "typecheck": "tsc --noEmit && npm run typecheck -w @agent-forge/desktop",
     "dev": "npm run dev -w @agent-forge/desktop",
     "smoke": "npm run smoke -w @agent-forge/desktop",

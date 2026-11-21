@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+@layer base {
+  html,
+  body {
+    @apply bg-neutral-950 antialiased;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 hover:bg-neutral-800 disabled:opacity-50;
+  }
+}

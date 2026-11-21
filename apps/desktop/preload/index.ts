@@ -5,7 +5,9 @@ import { IPC, type AgentForgeApi } from "../shared/api";
 
 const api: AgentForgeApi = {
   getInfo: () => ipcRenderer.invoke(IPC.getInfo),
-  notifyReady: () => ipcRenderer.send(IPC.rendererReady),
+  getOverview: (project) => ipcRenderer.invoke(IPC.getOverview, project),
+  pickProject: () => ipcRenderer.invoke(IPC.pickProject),
+  notifyReady: (error) => ipcRenderer.send(IPC.rendererReady, typeof error === "string" ? error : undefined),
 };
 
 contextBridge.exposeInMainWorld("agentForge", api);

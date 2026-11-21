@@ -26,28 +26,29 @@ export async function readClaude(ctx: PathContext): Promise<ToolConfig> {
   const r = new Reader();
   const { global: g, project: p } = claudePaths(ctx);
 
+  // Project scope is skipped when no project is selected.
+  const hasProject = ctx.project !== "";
+
   const rules = (
     await Promise.all([
       readRootRule(r, g.rulesFile, { ...md, scope: "global" }),
-      readRootRule(r, p.rulesFile, { ...md, scope: "project" }),
-      readRootRule(r, p.localRulesFile, { ...md, scope: "local" }),
+      hasProject ? readRootRule(r, p.rulesFile, { ...md, scope: "project" }) : null,
+      hasProject ? readRootRule(r, p.localRulesFile, { ...md, scope: "local" }) : null,
     ])
   ).filter((x): x is Rule => x !== null);
-  rules.push(
-    ...(await readRulesDir(r, g.rulesDir, { ...md, scope: "global" })),
-    ...(await readRulesDir(r, p.rulesDir, { ...md, scope: "project" })),
-  );
+  rules.push(...(await readRulesDir(r, g.rulesDir, { ...md, scope: "global" })));
+  if (hasProject) rules.push(...(await readRulesDir(r, p.rulesDir, { ...md, scope: "project" })));
 
   const agents = [
     ...(await readMarkdownAgents(r, g.agentsDir, { ...md, scope: "global" })),
-    ...(await readMarkdownAgents(r, p.agentsDir, { ...md, scope: "project" })),
+    ...(hasProject ? await readMarkdownAgents(r, p.agentsDir, { ...md, scope: "project" }) : []),
   ];
 
   const skills = [
     ...(await readSkillsDir(r, g.skillsDir, { ...md, scope: "global" })),
     // Synced from claude.ai and managed by Claude itself: shown, never edited.
     ...(await readSkillsDir(r, g.syncedSkillsDir, { ...md, scope: "global" }, { nested: true, extra: { managedBy: "claude.ai" } })),
-    ...(await readSkillsDir(r, p.skillsDir, { ...md, scope: "project" })),
+    ...(hasProject ? await readSkillsDir(r, p.skillsDir, { ...md, scope: "project" }) : []),
   ];
 
   const mcpServers: McpServer[] = [];
@@ -56,9 +57,9 @@ export async function readClaude(ctx: PathContext): Promise<ToolConfig> {
   if (userJson) {
     mcpServers.push(...serversFrom(userJson.mcpServers, source("claude", "global", g.userJson, "json")));
     const projects = userJson.projects as Record<string, { mcpServers?: unknown }> | undefined;
-    mcpServers.push(...serversFrom(projects?.[ctx.project]?.mcpServers, source("claude", "local", g.userJson, "json")));
+    if (hasProject) mcpServers.push(...serversFrom(projects?.[ctx.project]?.mcpServers, source("claude", "local", g.userJson, "json")));
   }
-  const mcpJson = (await r.json(p.mcpJson)) as Record<string, unknown> | undefined;
+  const mcpJson = hasProject ? ((await r.json(p.mcpJson)) as Record<string, unknown> | undefined) : undefined;
   if (mcpJson) mcpServers.push(...serversFrom(mcpJson.mcpServers, source("claude", "project", p.mcpJson, "json")));
 
   return {

@@ -91,3 +91,10 @@ test("reads skills from ~/.agents/skills and the legacy location", () => {
   assert.deepEqual(config.skills.map((s) => s.name), ["lint", "old"]);
   assert.equal(config.skills.find((s) => s.name === "old")?.extra.legacyLocation, true);
 });
+
+test("skips project scope when no project is selected", async () => {
+  const global = await readCodex({ home, project: "", env: {} });
+  const items = [...global.rules, ...global.agents, ...global.skills, ...global.mcpServers];
+  assert.ok(items.length > 0);
+  assert.ok(items.every((i) => i.source.scope === "global"), "only global items expected");
+});
