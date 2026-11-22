@@ -6,6 +6,10 @@ Agent Forge never calls an AI API itself. Each official CLI runs on your own sub
 
 > Status: early development (week 1 — research and skeleton). Nothing is usable yet.
 
+## Using the app
+
+- Korean user guide for testers: [docs/ko/사용법.md](docs/ko/사용법.md)
+
 ## Development
 
 Requires Node.js 22+.

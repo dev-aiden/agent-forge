@@ -15,7 +15,7 @@ export interface ApplySummary {
 
 export type ApplyResult =
   | { ok: true; manifest: ApplySummary }
-  | { ok: false; error: string; conflicts?: string[] };
+  | { ok: false; error: string; conflicts?: string[]; expired?: boolean };
 
 export interface AppInfo {
   name: string;

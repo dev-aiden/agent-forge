@@ -46,7 +46,13 @@ export function useApplyFlow(shortPath: (path: string) => string) {
     try {
       const result = await window.agentForge.apply(preview.id);
       if (!result.ok) {
-        setPreviewError(result.error);
+        setPreviewError(
+          result.conflicts?.length
+            ? t("preview.conflict", { files: result.conflicts.map((c) => (c.startsWith("/") || /^[A-Za-z]:/.test(c) ? shortPath(c) : c)).join(", ") })
+            : result.expired
+              ? t("preview.expired")
+              : result.error,
+        );
         return;
       }
       setPreview(null);

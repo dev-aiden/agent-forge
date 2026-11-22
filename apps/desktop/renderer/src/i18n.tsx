@@ -143,7 +143,7 @@ const en = {
   "rules.body": "Instructions",
   "rules.saved": "Saved. Use \"Preview & apply\" to write it to your tools.",
   "rules.unmanage": "Stop managing",
-  "rules.unmanageConfirm": "Stop managing global rules? Your tool files stay as they are.",
+  "rules.unmanageConfirm": "Stop managing these rules? Your tool files stay as they are.",
 
   // mcp
   "nav.mcp": "MCP",
@@ -192,6 +192,8 @@ const en = {
   "preview.projectMcpSecrets": "These servers have values written as-is into project files, which are often committed to git: {names}. Consider ${VAR} references instead.",
   "preview.blocked": "Claude Code CLI was not found, so its MCP servers cannot be changed.",
   "preview.blockedSession": "Agent Forge was started from inside a Claude Code session, where Claude Code refuses MCP changes from other programs. Start Agent Forge from Finder or a regular terminal.",
+  "preview.conflict": "Changed since the preview: {files}. Preview again.",
+  "preview.expired": "This preview expired. Preview again.",
   "cmd.add": "add",
   "cmd.replace": "replace",
   "cmd.remove": "remove",
@@ -363,7 +365,7 @@ const ko: Messages = {
   "rules.body": "지시문",
   "rules.saved": "저장했습니다. 도구에 쓰려면 \"미리보기 후 적용\"을 누르세요.",
   "rules.unmanage": "관리 중단",
-  "rules.unmanageConfirm": "전역 규칙 관리를 중단할까요? 도구 파일은 그대로 남습니다.",
+  "rules.unmanageConfirm": "규칙 관리를 중단할까요? 도구 파일은 그대로 남습니다.",
 
   "nav.mcp": "MCP",
   "mcp.title": "MCP 서버",
@@ -410,6 +412,8 @@ const ko: Messages = {
   "preview.projectMcpSecrets": "다음 서버는 값이 프로젝트 파일에 그대로 들어갑니다. 이 파일은 보통 git에 함께 올라가니 ${VAR} 형식의 환경변수 참조를 고려하세요: {names}",
   "preview.blocked": "Claude Code CLI를 찾지 못해 MCP 서버를 바꿀 수 없습니다.",
   "preview.blockedSession": "Agent Forge가 Claude Code 세션 안에서 실행되었습니다. 이 경우 Claude Code는 다른 프로그램의 MCP 변경을 거부합니다. Finder나 일반 터미널에서 Agent Forge를 실행하세요.",
+  "preview.conflict": "미리보기 이후 바뀌었습니다: {files}. 다시 미리보기 하세요.",
+  "preview.expired": "미리보기가 만료되었습니다. 다시 미리보기 하세요.",
   "cmd.add": "추가",
   "cmd.replace": "교체",
   "cmd.remove": "삭제",

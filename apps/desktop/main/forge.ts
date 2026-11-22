@@ -169,7 +169,7 @@ export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean
 
   handle(IPC.apply, async (id: string): Promise<ApplyResult> => {
     const entry = previews.get(id);
-    if (!entry) return { ok: false, error: "This preview expired. Preview again." };
+    if (!entry) return { ok: false, expired: true, error: "This preview expired. Preview again." };
     previews.delete(id);
     try {
       // Applies to the scope the preview was made for, even if the UI switched since.
