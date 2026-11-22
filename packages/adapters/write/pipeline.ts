@@ -9,9 +9,9 @@
 // All writes to tool config go through `writeChange` / `restoreChange`, and every
 // path is checked against `writableRoots` first.
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, unlink } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, rmdir, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { RULESYNC_TARGET, WRITABLE_AGENT_TOOLS } from "@agent-forge/model";
 import { claudePaths } from "../claude/paths";
 import { codexPaths } from "../codex/paths";
@@ -22,6 +22,7 @@ import {
   forgePaths,
   listAgents,
   listBackupIds,
+  listSkills,
   readState,
   writeFileAtomic,
   writeState,
@@ -92,7 +93,14 @@ function inside(child: string, parent: string): boolean {
 
 /** Directories Agent Forge may write into. Everything else is refused. */
 export function writableRoots(ctx: PathContext): string[] {
-  return [claudePaths(ctx).global.agentsDir, codexPaths(ctx).global.agentsDir];
+  const claude = claudePaths(ctx).global;
+  const codex = codexPaths(ctx).global;
+  return [claude.agentsDir, claude.skillsDir, codex.agentsDir, codex.skillsDir];
+}
+
+/** Folders inside writable roots that belong to someone else (e.g. claude.ai synced skills). */
+export function protectedDirs(ctx: PathContext): string[] {
+  return [claudePaths(ctx).global.syncedSkillsDir];
 }
 
 export function assertWritable(ctx: PathContext, path: string): void {
@@ -100,6 +108,24 @@ export function assertWritable(ctx: PathContext, path: string): void {
   if (abs !== path) throw new Error(`refusing non-normalized path: ${path}`);
   if (isSensitive(abs)) throw new Error(`refusing to write credential file: ${abs}`);
   if (!writableRoots(ctx).some((root) => inside(abs, root))) throw new Error(`refusing to write outside tool config folders: ${abs}`);
+  if (protectedDirs(ctx).some((dir) => abs === dir || inside(abs, dir))) throw new Error(`refusing to write into a folder managed by another app: ${abs}`);
+}
+
+/**
+ * After removing a file, removes its now-empty parent folders up to (not
+ * including) the writable root, e.g. ~/.claude/skills/<name>/.
+ */
+async function removeEmptyParents(ctx: PathContext, file: string): Promise<void> {
+  const roots = writableRoots(ctx);
+  let dir = dirname(file);
+  while (roots.some((root) => inside(dir, root))) {
+    try {
+      await rmdir(dir); // fails unless empty
+    } catch {
+      return;
+    }
+    dir = dirname(dir);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -108,7 +134,7 @@ export function assertWritable(ctx: PathContext, path: string): void {
 export async function preview(ctx: PathContext, runWorker: WorkerRunner): Promise<ChangeSet> {
   await ensureForgeDirs(ctx);
   const forge = forgePaths(ctx);
-  const agents = await listAgents(ctx);
+  const itemCount = (await listAgents(ctx)).length + (await listSkills(ctx)).length;
   const state = await readState(ctx);
 
   // Generate into a staging home that rulesync treats as "~".
@@ -120,14 +146,14 @@ export async function preview(ctx: PathContext, runWorker: WorkerRunner): Promis
     await mkdir(work);
 
     let outputs: string[] = [];
-    if (agents.length > 0) {
+    if (itemCount > 0) {
       const resultPath = join(stagingRoot, "result.json");
       const job = {
         stagingRoot,
         stagingHome,
         inputRoot: forge.source,
         targets: WRITABLE_AGENT_TOOLS.map((t) => RULESYNC_TARGET[t]),
-        features: ["subagents"],
+        features: ["subagents", "skills"],
       };
       await runWorker({
         cwd: work,
@@ -231,15 +257,19 @@ export async function apply(ctx: PathContext, set: ChangeSet): Promise<ApplyMani
   const done: Change[] = [];
   try {
     for (const c of pending) {
-      if (c.action === "delete") await unlink(c.path);
-      else await writeFileAtomic(c.path, c.after!);
+      if (c.action === "delete") {
+        await unlink(c.path);
+        await removeEmptyParents(ctx, c.path);
+      } else await writeFileAtomic(c.path, c.after!);
       done.push(c);
     }
   } catch (e) {
     // Roll back what was already written.
     for (const c of done.reverse()) {
-      if (c.before === null) await rm(c.path, { force: true });
-      else await writeFileAtomic(c.path, c.before);
+      if (c.before === null) {
+        await rm(c.path, { force: true });
+        await removeEmptyParents(ctx, c.path);
+      } else await writeFileAtomic(c.path, c.before);
     }
     await rm(dir, { recursive: true, force: true });
     throw e;
@@ -285,8 +315,10 @@ export async function undo(ctx: PathContext, id: string): Promise<UndoResult> {
       result.skipped.push(e.path);
       continue;
     }
-    if (e.backup === null) await rm(e.path, { force: true });
-    else await writeFileAtomic(e.path, await readFile(join(dir, e.backup)));
+    if (e.backup === null) {
+      await rm(e.path, { force: true });
+      await removeEmptyParents(ctx, e.path);
+    } else await writeFileAtomic(e.path, await readFile(join(dir, e.backup)));
 
     if (e.previouslyManaged === null) delete state.managed[e.path];
     else state.managed[e.path] = e.previouslyManaged;

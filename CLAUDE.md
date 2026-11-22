@@ -37,7 +37,8 @@
   - 스모크 테스트가 rulesync 워커와 pty 실행까지 확인
 - 3주차 완료: 에이전트를 앱에서 만들어 Claude Code·Codex 전역에 적용 (미리보기 → 백업 → 적용 → 되돌리기)
   - 쓰기 경로: `packages/adapters/write/` (rulesync는 임시 홈을 가리키는 별도 프로세스에서만 실행, 쓰기 허용 폴더 제한)
-  - 다음 후보: 스킬 쓰기 → 규칙·MCP 쓰기(rulesync가 MCP 목록·최상위 규칙을 통째로 교체하므로 기존 내용 가져와 합치기 필요, `~/.claude.json` 쓰기는 원칙 2 관련 결정 필요)
+  - 스킬 쓰기 완료: `~/.claude/skills/<이름>/`, `~/.agents/skills/<이름>/`(Codex). claude.ai 동기화 폴더(`~/.claude/skills/synced`)는 쓰기 금지, 이름 `synced` 예약
+  - 다음 후보: 규칙·MCP 쓰기(rulesync가 MCP 목록·최상위 규칙을 통째로 교체하므로 기존 내용 가져와 합치기 필요, `~/.claude.json` 쓰기는 원칙 2 관련 결정 필요)
 - 2주차 완료: 공통 데이터 구조(`packages/model`), Claude Code·Codex 읽기 어댑터, 설정 한눈에 보기 화면, 파일 감시 자동 갱신
 - 1주차 완료:
   - `npm run scan` — 4개 도구 설정 경로·형식 스캐너 (`packages/adapters/scripts/scan.ts`)

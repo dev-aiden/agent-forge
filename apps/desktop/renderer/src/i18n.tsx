@@ -104,6 +104,18 @@ const en = {
   "agents.restored": "Restored {n} file(s).",
   "agents.keptEdited": "Kept {n} file(s) you edited after applying: {files}",
 
+  // skills
+  "nav.skills": "Skills",
+  "skills.title": "My skills",
+  "skills.empty": "No skills yet. Create one on the right.",
+  "skills.newTitle": "New skill",
+  "skills.create": "Create skill",
+  "skills.nameHint": "Letters, digits, - and _. Used as the folder name.",
+  "skills.descriptionHint": "When should the tool use this skill?",
+  "skills.descriptionPlaceholder": "Formats and checks commit messages",
+  "skills.body": "SKILL.md content",
+  "skills.bodyPlaceholder": "# Commit messages\n\nWhen asked to commit…",
+
   // preview dialog
   "preview.title": "Review changes",
   "preview.upToDate": "Everything is already up to date. Nothing will be written.",
@@ -239,6 +251,17 @@ const ko: Messages = {
   "agents.applied": "파일 {n}개를 적용했습니다. 원본은 백업했습니다.",
   "agents.restored": "파일 {n}개를 되돌렸습니다.",
   "agents.keptEdited": "적용 후 직접 고친 파일 {n}개는 그대로 두었습니다: {files}",
+
+  "nav.skills": "스킬",
+  "skills.title": "내 스킬",
+  "skills.empty": "아직 스킬이 없습니다. 오른쪽에서 만들어 보세요.",
+  "skills.newTitle": "새 스킬",
+  "skills.create": "스킬 만들기",
+  "skills.nameHint": "영문, 숫자, -, _ 만 쓸 수 있습니다. 폴더 이름으로 쓰입니다.",
+  "skills.descriptionHint": "도구가 언제 이 스킬을 쓰면 될까요?",
+  "skills.descriptionPlaceholder": "커밋 메시지를 정해진 형식으로 쓰고 점검합니다",
+  "skills.body": "SKILL.md 내용",
+  "skills.bodyPlaceholder": "# 커밋 메시지\n\n커밋을 요청받으면…",
 
   "preview.title": "변경 사항 확인",
   "preview.upToDate": "이미 최신 상태입니다. 아무것도 쓰지 않습니다.",

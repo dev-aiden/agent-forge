@@ -2,6 +2,7 @@
 //
 //   ~/.agent-forge/
 //     source/subagents/<name>.md   app-managed agents, in rulesync source format
+//     source/skills/<name>/SKILL.md app-managed skills, in rulesync source format
 //     backups/<apply-id>/          originals saved before each apply + manifest.json
 //     state.json                   files currently owned by Agent Forge (path → hash)
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
@@ -9,9 +10,11 @@ import { dirname, join } from "node:path";
 import { stringify as stringifyYaml } from "yaml";
 import {
   MANAGED_NAME,
+  RESERVED_SKILL_NAMES,
   RULESYNC_TARGET,
   WRITABLE_AGENT_TOOLS,
   type ManagedAgent,
+  type ManagedSkill,
   type ToolId,
 } from "@agent-forge/model";
 import { Reader, splitFrontmatter, str, stringList } from "../shared/read-utils";
@@ -27,6 +30,7 @@ export function forgePaths(ctx: PathContext) {
     root,
     source: join(root, "source"),
     agents: join(root, "source", "subagents"),
+    skills: join(root, "source", "skills"),
     backups: join(root, "backups"),
     state: join(root, "state.json"),
   };
@@ -134,6 +138,72 @@ export async function deleteAgent(ctx: PathContext, name: string): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
+// skills
+
+function assertValidSkillName(name: string): void {
+  assertValidName(name);
+  if (RESERVED_SKILL_NAMES.includes(name.toLowerCase())) throw new Error(`"${name}" is reserved by the tools. Choose another name.`);
+}
+
+/** Serializes to the rulesync skill format (SKILL.md with frontmatter). */
+export function toRulesyncSkill(skill: ManagedSkill): string {
+  const front = {
+    name: skill.name,
+    description: skill.description,
+    targets: skill.targets.map((t) => RULESYNC_TARGET[t]),
+  };
+  const body = skill.body.endsWith("\n") ? skill.body : `${skill.body}\n`;
+  return `---\n${stringifyYaml(front)}---\n${body}`;
+}
+
+export async function listSkills(ctx: PathContext): Promise<ManagedSkill[]> {
+  const { skills } = forgePaths(ctx);
+  const reader = new Reader();
+  const out: ManagedSkill[] = [];
+  for (const entry of await reader.entries(skills)) {
+    if (!entry.isDir) continue;
+    const path = join(entry.path, "SKILL.md");
+    const text = await reader.text(path);
+    if (text === null) continue;
+    const { data, body } = splitFrontmatter(reader, path, text);
+    out.push({
+      name: str(data.name) ?? entry.name,
+      description: str(data.description) ?? "",
+      body,
+      targets: (stringList(data.targets) ?? []).map((t) => RULESYNC_TO_TOOL[t]).filter((t): t is ToolId => Boolean(t)),
+    });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function saveSkill(ctx: PathContext, input: ManagedSkill, previousName?: string): Promise<ManagedSkill> {
+  const skill: ManagedSkill = {
+    name: input.name.trim(),
+    description: input.description.trim(),
+    body: input.body,
+    targets: [...new Set(input.targets)].filter((t) => WRITABLE_AGENT_TOOLS.includes(t)),
+  };
+  assertValidSkillName(skill.name);
+  if (!skill.description) throw new Error("Description is required.");
+  if (skill.targets.length === 0) throw new Error("Select at least one tool.");
+  if (previousName !== undefined) assertValidName(previousName);
+
+  const { skills } = forgePaths(ctx);
+  const existing = await listSkills(ctx);
+  if (existing.some((s) => s.name.toLowerCase() === skill.name.toLowerCase() && s.name !== previousName)) {
+    throw new Error(`A skill named "${skill.name}" already exists.`);
+  }
+  await writeFileAtomic(join(skills, skill.name, "SKILL.md"), toRulesyncSkill(skill));
+  if (previousName && previousName !== skill.name) await rm(join(skills, previousName), { recursive: true, force: true });
+  return skill;
+}
+
+export async function deleteSkill(ctx: PathContext, name: string): Promise<void> {
+  assertValidName(name);
+  await rm(join(forgePaths(ctx).skills, name), { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------------------
 // state: which tool files Agent Forge currently owns
 
 export interface ForgeState {
@@ -157,6 +227,7 @@ export async function writeState(ctx: PathContext, state: ForgeState): Promise<v
 export async function ensureForgeDirs(ctx: PathContext): Promise<void> {
   const p = forgePaths(ctx);
   await mkdir(p.agents, { recursive: true });
+  await mkdir(p.skills, { recursive: true });
   await mkdir(p.backups, { recursive: true });
 }
 

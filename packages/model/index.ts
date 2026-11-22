@@ -186,3 +186,19 @@ export const MANAGED_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 
 /** Tools Agent Forge can write agents to so far. */
 export const WRITABLE_AGENT_TOOLS: readonly ToolId[] = ["claude", "codex"];
+
+/** A skill created in Agent Forge (SKILL.md only for now). */
+export interface ManagedSkill {
+  /** File-safe identifier; also the skill folder name. */
+  name: string;
+  /** When the tool should use this skill. */
+  description: string;
+  /** SKILL.md body. */
+  body: string;
+  targets: ToolId[];
+}
+
+/** Names that would collide with folders managed by the tools themselves. */
+export const RESERVED_SKILL_NAMES: readonly string[] = ["synced"];
+
+export type ManagedKind = "agent" | "skill";

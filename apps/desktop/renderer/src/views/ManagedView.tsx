@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { WRITABLE_AGENT_TOOLS, type ManagedAgent, type ToolId } from "@agent-forge/model";
+import { WRITABLE_AGENT_TOOLS, type ManagedAgent, type ManagedKind, type ManagedSkill, type ToolId } from "@agent-forge/model";
 import type { ApplyManifest, ChangeSet } from "../../../shared/api";
 import { Badge } from "../components/Badges";
 import { PreviewDialog } from "../components/PreviewDialog";
@@ -24,24 +24,67 @@ interface Draft {
 
 const EMPTY: Draft = { name: "", description: "", body: "", model: "", tools: "", targets: [...WRITABLE_AGENT_TOOLS] };
 
-function toDraft(a: ManagedAgent): Draft {
-  return { name: a.name, description: a.description, body: a.body, model: a.model ?? "", tools: a.tools?.join(", ") ?? "", targets: a.targets };
+type Managed = ManagedAgent | ManagedSkill;
+
+function toDraft(a: Managed): Draft {
+  const model = "model" in a ? (a.model ?? "") : "";
+  const tools = "tools" in a ? (a.tools?.join(", ") ?? "") : "";
+  return { name: a.name, description: a.description, body: a.body, model, tools, targets: a.targets };
 }
 
-function fromDraft(d: Draft): ManagedAgent {
+function fromDraft(kind: ManagedKind, d: Draft): Managed {
+  const base = { name: d.name.trim(), description: d.description.trim(), body: d.body, targets: d.targets };
+  if (kind === "skill") return base;
   return {
-    name: d.name.trim(),
-    description: d.description.trim(),
-    body: d.body,
+    ...base,
     model: d.model.trim() || undefined,
-    tools: d.tools.split(",").map((t) => t.trim()).filter(Boolean),
-    targets: d.targets,
+    tools: d.tools.split(",").map((x) => x.trim()).filter(Boolean),
   };
 }
 
-export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
+/** Per-kind data functions and labels. */
+function kindConfig(kind: ManagedKind) {
+  const api = window.agentForge;
+  return kind === "agent"
+    ? {
+        list: () => api.listAgents() as Promise<Managed[]>,
+        save: (item: Managed, prev?: string) => api.saveAgent(item as ManagedAgent, prev) as Promise<Managed>,
+        remove: (name: string) => api.deleteAgent(name),
+        label: {
+          title: "agents.title",
+          empty: "agents.empty",
+          newTitle: "agents.newTitle",
+          create: "agents.create",
+          nameHint: "agents.nameHint",
+          descriptionHint: "agents.descriptionHint",
+          descriptionPlaceholder: "agents.descriptionPlaceholder",
+          body: "agents.instructions",
+          bodyPlaceholder: "agents.instructionsPlaceholder",
+        },
+      } as const
+    : {
+        list: () => api.listSkills() as Promise<Managed[]>,
+        save: (item: Managed, prev?: string) => api.saveSkill(item as ManagedSkill, prev) as Promise<Managed>,
+        remove: (name: string) => api.deleteSkill(name),
+        label: {
+          title: "skills.title",
+          empty: "skills.empty",
+          newTitle: "skills.newTitle",
+          create: "skills.create",
+          nameHint: "skills.nameHint",
+          descriptionHint: "skills.descriptionHint",
+          descriptionPlaceholder: "skills.descriptionPlaceholder",
+          body: "skills.body",
+          bodyPlaceholder: "skills.bodyPlaceholder",
+        },
+      } as const;
+}
+
+export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(path: string): string }) {
   const t = useT();
-  const [agents, setAgents] = useState<ManagedAgent[]>([]);
+  const cfg = kindConfig(kind);
+  const L = cfg.label;
+  const [agents, setAgents] = useState<Managed[]>([]);
   const [history, setHistory] = useState<ApplyManifest[]>([]);
   /** null = new agent */
   const [editing, setEditing] = useState<string | null>(null);
@@ -56,17 +99,18 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
 
   const refresh = useCallback(async () => {
-    const [a, h] = await Promise.all([window.agentForge.listAgents(), window.agentForge.history()]);
+    const [a, h] = await Promise.all([cfg.list(), window.agentForge.history()]);
     setAgents(a);
     setHistory(h);
     return a;
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind]);
 
   useEffect(() => {
     refresh().catch((e) => setError(errorText(e)));
   }, [refresh]);
 
-  function select(agent: ManagedAgent | null) {
+  function select(agent: Managed | null) {
     if (dirty && !confirm(t("agents.discard"))) return;
     const d = agent ? toDraft(agent) : EMPTY;
     setEditing(agent?.name ?? null);
@@ -78,7 +122,7 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
   async function save() {
     setError(null);
     try {
-      const agent = await window.agentForge.saveAgent(fromDraft(draft), editing ?? undefined);
+      const agent = await cfg.save(fromDraft(kind, draft), editing ?? undefined);
       await refresh();
       const d = toDraft(agent);
       setEditing(agent.name);
@@ -92,7 +136,7 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
 
   async function remove() {
     if (!editing || !confirm(t("agents.confirmDelete", { name: editing }))) return;
-    await window.agentForge.deleteAgent(editing);
+    await cfg.remove(editing);
     await refresh();
     setEditing(null);
     setDraft(EMPTY);
@@ -158,13 +202,13 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
       {/* Left: agents + history */}
       <aside className="flex w-[300px] shrink-0 flex-col border-r border-neutral-800">
         <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{t("agents.title")}</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{t(L.title)}</span>
           <button className="btn" onClick={() => select(null)}>
             {t("agents.new")}
           </button>
         </div>
         <ul className="min-h-0 flex-1 overflow-y-auto">
-          {agents.length === 0 && <li className="px-3 py-3 text-xs text-neutral-600">{t("agents.empty")}</li>}
+          {agents.length === 0 && <li className="px-3 py-3 text-xs text-neutral-600">{t(L.empty)}</li>}
           {agents.map((a) => (
             <li key={a.name}>
               <button
@@ -211,7 +255,7 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
       {/* Right: editor */}
       <section className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-3 border-b border-neutral-800 px-5 py-2.5">
-          <h2 className="text-sm font-medium text-neutral-100">{editing ? t("agents.editTitle", { name: editing }) : t("agents.newTitle")}</h2>
+          <h2 className="text-sm font-medium text-neutral-100">{editing ? t("agents.editTitle", { name: editing }) : t(L.newTitle)}</h2>
           <span className="text-xs text-neutral-500">{t("agents.scopeNote")}</span>
           <button
             className="btn-primary ml-auto"
@@ -245,11 +289,11 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
             void save();
           }}
         >
-          <Field label={t("agents.name")} hint={t("agents.nameHint")}>
+          <Field label={t("agents.name")} hint={t(L.nameHint)}>
             <input className="input font-mono" value={draft.name} onChange={(e) => set("name", e.target.value)} placeholder="code-reviewer" />
           </Field>
-          <Field label={t("agents.description")} hint={t("agents.descriptionHint")}>
-            <input className="input" value={draft.description} onChange={(e) => set("description", e.target.value)} placeholder={t("agents.descriptionPlaceholder")} />
+          <Field label={t("agents.description")} hint={t(L.descriptionHint)}>
+            <input className="input" value={draft.description} onChange={(e) => set("description", e.target.value)} placeholder={t(L.descriptionPlaceholder)} />
           </Field>
           <Field label={t("agents.applyTo")}>
             <div className="flex gap-4">
@@ -261,6 +305,7 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
               ))}
             </div>
           </Field>
+          {kind === "agent" && (
           <div className="grid grid-cols-2 gap-4">
             <Field label={t("agents.model")} hint={t("agents.modelHint")}>
               <input className="input font-mono" value={draft.model} onChange={(e) => set("model", e.target.value)} placeholder="sonnet" />
@@ -269,17 +314,18 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
               <input className="input font-mono" value={draft.tools} onChange={(e) => set("tools", e.target.value)} placeholder="Read, Grep, Glob" />
             </Field>
           </div>
-          <Field label={t("agents.instructions")}>
+          )}
+          <Field label={t(L.body)}>
             <textarea
               className="input min-h-[240px] font-mono text-xs leading-relaxed"
               value={draft.body}
               onChange={(e) => set("body", e.target.value)}
-              placeholder={t("agents.instructionsPlaceholder")}
+              placeholder={t(L.bodyPlaceholder)}
             />
           </Field>
           <div className="flex gap-2">
             <button type="submit" className="btn-primary" disabled={!dirty}>
-              {editing ? t("agents.save") : t("agents.create")}
+              {editing ? t("agents.save") : t(L.create)}
             </button>
             {editing && (
               <button type="button" className="btn" onClick={remove}>

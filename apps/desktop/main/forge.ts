@@ -6,15 +6,18 @@ import { utilityProcess, type IpcMainInvokeEvent, ipcMain } from "electron";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ManagedAgent } from "@agent-forge/model";
+import type { ManagedAgent, ManagedSkill } from "@agent-forge/model";
 import {
   apply,
   ConflictError,
   deleteAgent,
+  deleteSkill,
   history,
   listAgents,
+  listSkills,
   preview,
   saveAgent,
+  saveSkill,
   undo,
   type ChangeSet,
   type PathContext,
@@ -57,6 +60,12 @@ export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean
   handle(IPC.saveAgent, (agent: ManagedAgent, previousName?: string) => saveAgent(ctx(), agent, previousName));
 
   handle(IPC.deleteAgent, (name: string) => deleteAgent(ctx(), name));
+
+  handle(IPC.listSkills, () => listSkills(ctx()));
+
+  handle(IPC.saveSkill, (skill: ManagedSkill, previousName?: string) => saveSkill(ctx(), skill, previousName));
+
+  handle(IPC.deleteSkill, (name: string) => deleteSkill(ctx(), name));
 
   handle(IPC.previewApply, async () => {
     const set = await preview(ctx(), utilityRunner);

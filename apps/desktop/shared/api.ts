@@ -1,6 +1,6 @@
 // Types shared by main, preload and renderer. Keep this file free of runtime imports.
 import type { ApplyManifest, ChangeSet, UndoResult } from "@agent-forge/adapters";
-import type { ManagedAgent, ToolConfig, ToolId } from "@agent-forge/model";
+import type { ManagedAgent, ManagedSkill, ToolConfig, ToolId } from "@agent-forge/model";
 
 export type { ApplyManifest, Change, ChangeSet, UndoResult } from "@agent-forge/adapters";
 
@@ -77,6 +77,9 @@ export interface AgentForgeApi {
   listAgents(): Promise<ManagedAgent[]>;
   saveAgent(agent: ManagedAgent, previousName?: string): Promise<ManagedAgent>;
   deleteAgent(name: string): Promise<void>;
+  listSkills(): Promise<ManagedSkill[]>;
+  saveSkill(skill: ManagedSkill, previousName?: string): Promise<ManagedSkill>;
+  deleteSkill(name: string): Promise<void>;
   /** Computes changes without touching tool config. */
   previewApply(): Promise<ChangeSet>;
   /** Applies a preview made by the main process (by id only). */
@@ -109,6 +112,9 @@ export const IPC = {
   listAgents: "forge:list-agents",
   saveAgent: "forge:save-agent",
   deleteAgent: "forge:delete-agent",
+  listSkills: "forge:list-skills",
+  saveSkill: "forge:save-skill",
+  deleteSkill: "forge:delete-skill",
   previewApply: "forge:preview",
   apply: "forge:apply",
   undo: "forge:undo",

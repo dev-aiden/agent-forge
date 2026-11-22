@@ -9,7 +9,7 @@ import type { ManagedAgent } from "@agent-forge/model";
 import type { PathContext } from "../types";
 import { nodeWorkerRunner } from "./node-runner";
 import { apply, assertWritable, ConflictError, history, preview, undo } from "./pipeline";
-import { deleteAgent, listAgents, saveAgent } from "./store";
+import { deleteAgent, deleteSkill, listAgents, listSkills, saveAgent, saveSkill } from "./store";
 
 let root: string;
 let ctx: PathContext;
@@ -167,4 +167,59 @@ test("credential and account files are untouched after a full cycle", async () =
   await undo(ctx, m.id);
   assert.equal(await readFile(join(toolHome(), ".codex", "auth.json"), "utf8"), '{"OPENAI_API_KEY":"x"}');
   assert.equal(await readFile(join(toolHome(), ".claude.json"), "utf8"), '{"oauthAccount":{}}');
+});
+
+// ---------------------------------------------------------------------------
+// skills
+
+const lint = { name: "forge-lint", description: "Run the linter", body: "Run `npm run lint`.", targets: ["claude", "codex"] as ("claude" | "codex")[] };
+const claudeSkill = () => join(toolHome(), ".claude", "skills", "forge-lint", "SKILL.md");
+const codexSkill = () => join(toolHome(), ".agents", "skills", "forge-lint", "SKILL.md");
+
+test("skills: store round-trip and reserved names", async () => {
+  await saveSkill(ctx, lint);
+  assert.deepEqual(await listSkills(ctx), [{ ...lint, body: "Run `npm run lint`.\n" }]);
+  await assert.rejects(saveSkill(ctx, { ...lint, name: "synced" }), /reserved/);
+  await assert.rejects(saveSkill(ctx, { ...lint, name: "a/b" }), /Name must/);
+});
+
+test("skills: apply creates SKILL.md for Claude and Codex, delete removes the folders", async () => {
+  await put(join(toolHome(), ".claude", "skills", "my-own", "SKILL.md"), "---\nname: my-own\n---\nmine\n");
+  await saveSkill(ctx, lint);
+  const set = await preview(ctx, nodeWorkerRunner);
+  assert.deepEqual(
+    set.changes.map((c) => [c.path, c.action]),
+    [
+      [codexSkill(), "create"],
+      [claudeSkill(), "create"],
+    ].sort((a, b) => a[0].localeCompare(b[0])),
+  );
+  await apply(ctx, set);
+  assert.match(await readFile(claudeSkill(), "utf8"), /Run the linter/);
+  assert.ok(await exists(codexSkill()));
+
+  await deleteSkill(ctx, lint.name);
+  const del = await apply(ctx, await preview(ctx, nodeWorkerRunner));
+  assert.equal(del.entries.length, 2);
+  assert.ok(!(await exists(dirname(claudeSkill()))), "empty skill folder should be removed");
+  assert.ok(!(await exists(dirname(codexSkill()))));
+  assert.ok(await exists(join(toolHome(), ".claude", "skills", "my-own", "SKILL.md")), "user's own skill must stay");
+
+  await undo(ctx, del.id);
+  assert.ok(await exists(claudeSkill()));
+});
+
+test("skills: undo of a create removes the skill folder", async () => {
+  await saveSkill(ctx, lint);
+  const m = await apply(ctx, await preview(ctx, nodeWorkerRunner));
+  await undo(ctx, m.id);
+  assert.ok(!(await exists(dirname(claudeSkill()))));
+  assert.ok(await exists(join(toolHome(), ".claude")), "tool folder itself stays");
+});
+
+test("never writes into claude.ai synced skills", () => {
+  const synced = join(toolHome(), ".claude", "skills", "synced", "bucket", "x", "SKILL.md");
+  assert.throws(() => assertWritable(ctx, synced), /managed by another app/);
+  assert.doesNotThrow(() => assertWritable(ctx, claudeSkill()));
+  assert.doesNotThrow(() => assertWritable(ctx, codexSkill()));
 });

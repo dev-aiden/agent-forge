@@ -6,10 +6,10 @@ import { ItemList } from "./components/ItemList";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { errorText, makeShortPath } from "./format";
 import { I18nProvider, resolveLanguage, useT } from "./i18n";
-import { AgentsView } from "./views/AgentsView";
+import { ManagedView } from "./views/ManagedView";
 import { TerminalView } from "./views/TerminalView";
 
-type View = "overview" | "agents" | "terminal";
+type View = "overview" | "agents" | "skills" | "terminal";
 
 export function App() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -117,7 +117,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
     }
   }
 
-  const views: View[] = ["overview", "agents", "terminal"];
+  const views: View[] = ["overview", "agents", "skills", "terminal"];
   const timeText = overview ? new Date(overview.readAt).toLocaleTimeString() : "";
 
   return (
@@ -168,7 +168,8 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
 
       {error && <div className="border-b border-red-900 bg-red-950/50 px-4 py-2 text-xs text-red-300">{error}</div>}
 
-      {view === "agents" && <AgentsView shortPath={homePath} />}
+      {view === "agents" && <ManagedView key="agent" kind="agent" shortPath={homePath} />}
+      {view === "skills" && <ManagedView key="skill" kind="skill" shortPath={homePath} />}
 
       {/* Kept mounted so running CLIs survive switching views. */}
       <TerminalView tools={visibleTools} visible={view === "terminal"} shortPath={homePath} />
