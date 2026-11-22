@@ -32,7 +32,12 @@
 - 렌더러는 Node 접근 없이(contextIsolation) preload로 노출한 API만 쓴다.
 
 ## 현재 단계와 다음 작업
-- 지금: 4주차 — 실행 창(터미널 탭: 감지된 CLI·셸을 node-pty로 실행), 한국어/영어 화면, 설정(언어·도구 켜고 끄기, `~/.agent-forge/settings.json`), 로그인 셸 PATH 가져오기
+- 5주차: 라이트/다크 테마(설정), 실행 창 개선(다시 실행·글자 크기·찾기·링크·Windows 복사/붙여넣기), Copilot·Antigravity 읽기 어댑터(미확인 경로 표시), 프로젝트 단위 쓰기
+  - 프로젝트 쓰기 결정: 원본은 `~/.agent-forge/projects/<이름-해시>/`(내 컴퓨터에만), 결과 파일만 프로젝트 안에 생김
+  - 프로젝트 출력: `.claude/agents|skills`, `.codex/agents`, `.agents/skills`, `CLAUDE.md`, `AGENTS.md`, `.mcp.json`(Claude, 파일로 직접), `.codex/config.toml`
+  - 렌더러는 "전역/이 프로젝트"만 고르고 실제 폴더는 메인 프로세스가 정함. 홈 폴더·그 상위·`~/.agent-forge`는 프로젝트로 거부
+  - 사용법 문서: `docs/ko/사용법.md` (지인 테스트용)
+- 4주차: 실행 창 — 실행 창(터미널 탭: 감지된 CLI·셸을 node-pty로 실행), 한국어/영어 화면, 설정(언어·도구 켜고 끄기, `~/.agent-forge/settings.json`), 로그인 셸 PATH 가져오기
   - node-pty: macOS·Windows는 prebuild, Linux는 설치 시 빌드. macOS `spawn-helper` 실행 권한은 루트 `postinstall`(scripts/fix-node-pty.mjs)이 복구
   - 스모크 테스트가 rulesync 워커와 pty 실행까지 확인
 - 3주차 완료: 에이전트를 앱에서 만들어 Claude Code·Codex 전역에 적용 (미리보기 → 백업 → 적용 → 되돌리기)

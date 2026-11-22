@@ -183,7 +183,6 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
           <h2 className="text-sm font-medium text-neutral-100">
             {servers === null ? t("mcp.title") : editing ? t("agents.editTitle", { name: editing }) : t("mcp.newTitle")}
           </h2>
-          <span className="text-xs text-neutral-500">{t("agents.scopeNote")}</span>
           <div className="ml-auto">{servers && flow.previewButton(dirty, dirty ? t("agents.saveFirst") : undefined)}</div>
         </div>
         {flow.banners}

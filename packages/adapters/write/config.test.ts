@@ -182,7 +182,7 @@ test("display copy of a preview never contains secrets", async () => {
   await importMcp(ctx);
   await saveMcpServer(ctx, { name: "y", transport: "http", url: "https://y.example.invalid/mcp?key=SECRET_Q", headers: { Authorization: "SECRET_H" }, targets: ["claude", "codex"] });
   const set = await preview(ctx, runners);
-  const shown = JSON.stringify(displayChangeSet(set, (p) => p === codexConfig()));
+  const shown = JSON.stringify(displayChangeSet(set));
   for (const s of ["SECRET_GH", "SECRET_C7", "SECRET_Q", "SECRET_H"]) assert.ok(!shown.includes(s), `${s} leaked`);
   assert.ok(JSON.stringify(set).includes("SECRET_Q"), "the real set keeps values for applying");
 });
@@ -245,7 +245,7 @@ test("mcp: Codex-only fields (timeouts, enabled = false) survive import, edit an
   // Codex rejects bearer_token_env_var on stdio servers (rulesync drops it); url servers keep it.
   assert.deepEqual({ ...after.mcp_servers.remote }, { url: "https://example.invalid/mcp", bearer_token_env_var: "SECRET_RT" });
   // The diff the renderer gets hides secret-looking fields on both sides.
-  const shown = displayChangeSet(set, (p) => p === codexConfig()).changes.find((c) => c.path === codexConfig())!;
+  const shown = displayChangeSet(set).changes.find((c) => c.path === codexConfig())!;
   assert.ok(!/SECRET_(BT|RT)/.test(shown.before!) && !/SECRET_(BT|RT)/.test(shown.after!));
 });
 

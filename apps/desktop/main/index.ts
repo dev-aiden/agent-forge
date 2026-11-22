@@ -168,7 +168,7 @@ ipcMain.handle(IPC.pickProject, async (event) => {
   return result.canceled ? null : (result.filePaths[0] ?? null);
 });
 
-registerForgeIpc(trusted);
+registerForgeIpc(trusted, () => watchedProject ?? null);
 registerTerminalIpc(trusted, () => watchedProject ?? null);
 
 const settingsCtx = () => ({ home: homedir(), project: "", env: process.env });

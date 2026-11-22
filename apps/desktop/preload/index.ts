@@ -42,6 +42,7 @@ const api: AgentForgeApi = {
   apply: (previewId) => ipcRenderer.invoke(IPC.apply, previewId),
   undo: (applyId) => ipcRenderer.invoke(IPC.undo, applyId),
   history: () => ipcRenderer.invoke(IPC.history),
+  setWriteScope: (scope) => ipcRenderer.invoke(IPC.setWriteScope, scope),
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   saveSettings: (settings) => ipcRenderer.invoke(IPC.saveSettings, settings),
   termSpawn: (target, cols, rows) => ipcRenderer.invoke(IPC.termSpawn, target, cols, rows),

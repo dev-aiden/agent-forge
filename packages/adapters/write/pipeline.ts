@@ -78,9 +78,21 @@ export type Warning =
       names: string[];
     }
   | {
-      /** ~/.codex/AGENTS.override.md exists: Codex reads it instead of the AGENTS.md we write. */
+      /** AGENTS.override.md exists: Codex reads it instead of the AGENTS.md we write. */
       kind: "codex-rule-override";
       path: string;
+    }
+  | {
+      /**
+       * Project MCP files change. Claude Code asks before using servers from .mcp.json;
+       * Codex reads .codex/config.toml only in trusted projects.
+       */
+      kind: "project-mcp";
+    }
+  | {
+      /** Literal secret values would be written into project files (often committed to git). */
+      kind: "project-mcp-secrets";
+      names: string[];
     };
 
 export interface ChangeSet {
@@ -142,26 +154,53 @@ function inside(child: string, parent: string): boolean {
   return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }
 
+const isProject = (ctx: PathContext) => ctx.project !== "";
+
+/**
+ * A project folder Agent Forge may write into. Refuses the home folder and its
+ * parents (project paths would then hit the global config) and Agent Forge's own folder.
+ */
+export function assertProjectAllowed(ctx: PathContext): void {
+  if (!isProject(ctx)) return;
+  const p = ctx.project;
+  if (!isAbsolute(p) || resolve(p) !== p) throw new Error(`invalid project folder: ${p}`);
+  const home = resolve(ctx.home);
+  if (p === home || inside(home, p)) throw new Error("Choose a project folder inside your home folder, not the home folder itself.");
+  if (p === forgePaths(ctx).root || inside(p, forgePaths(ctx).root)) throw new Error("This folder belongs to Agent Forge.");
+}
+
 /** Folders holding one file per app-managed item. Files here may be created and deleted. */
 export function writableRoots(ctx: PathContext): string[] {
-  const claude = claudePaths(ctx).global;
-  const codex = codexPaths(ctx).global;
+  const scope = isProject(ctx) ? "project" : "global";
+  const claude = claudePaths(ctx)[scope];
+  const codex = codexPaths(ctx)[scope];
   return [claude.agentsDir, claude.skillsDir, codex.agentsDir, codex.skillsDir];
 }
 
 /** Individual shared files Agent Forge may update (never delete). */
 export function writableFiles(ctx: PathContext): string[] {
+  if (isProject(ctx)) {
+    const claude = claudePaths(ctx).project;
+    const codex = codexPaths(ctx).project;
+    return [claude.rulesFile, codex.rulesFile, codex.config, claude.mcpJson];
+  }
   const claude = claudePaths(ctx).global;
   const codex = codexPaths(ctx).global;
   return [claude.rulesFile, codex.rulesFile, codex.config];
 }
 
+/** Shared files rulesync merges into: the real file is staged first so other keys survive. */
+function mergedFiles(ctx: PathContext): string[] {
+  return isProject(ctx) ? [codexPaths(ctx).project.config, claudePaths(ctx).project.mcpJson] : [codexPaths(ctx).global.config];
+}
+
 /** Folders inside writable roots that belong to someone else (e.g. claude.ai synced skills). */
 export function protectedDirs(ctx: PathContext): string[] {
-  return [claudePaths(ctx).global.syncedSkillsDir];
+  return isProject(ctx) ? [] : [claudePaths(ctx).global.syncedSkillsDir];
 }
 
 export function assertWritable(ctx: PathContext, path: string): void {
+  assertProjectAllowed(ctx);
   const abs = resolve(path);
   if (abs !== path) throw new Error(`refusing non-normalized path: ${path}`);
   if (isSensitive(abs)) throw new Error(`refusing to write credential file: ${abs}`);
@@ -195,9 +234,13 @@ async function removeEmptyParents(ctx: PathContext, file: string): Promise<void>
 // preview
 
 export async function preview(ctx: PathContext, runners: PipelineRunners): Promise<ChangeSet> {
+  assertProjectAllowed(ctx);
   await ensureForgeDirs(ctx);
+  const project = isProject(ctx);
   const forge = forgePaths(ctx);
-  const codex = codexPaths(ctx).global;
+  const codex = codexPaths(ctx)[project ? "project" : "global"];
+  // rulesync writes paths relative to the user's home (global) or the project folder.
+  const realRoot = project ? ctx.project : ctx.home;
   const state = await readState(ctx);
   const [agents, skills, rule, mcp] = await Promise.all([
     listAgents(ctx),
@@ -212,21 +255,27 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
   if (rule) features.push("rules");
   if (mcp) features.push("mcp");
 
-  // Generate into a staging home that rulesync treats as "~".
+  // Generate into a staging home that rulesync treats as "~" (and a staging
+  // project folder in project scope). Nothing real is written here.
   const stagingRoot = await mkdtemp(join(tmpdir(), "agent-forge-stage-"));
   try {
     const stagingHome = join(stagingRoot, "home");
     const work = join(stagingRoot, "work");
+    const stagingOut = project ? join(stagingRoot, "project") : stagingHome;
     await mkdir(stagingHome);
     await mkdir(work);
+    if (project) await mkdir(stagingOut);
 
     let outputs: string[] = [];
     if (features.length > 0) {
-      // rulesync merges MCP into config.toml: give it the real file so other keys survive.
-      if (mcp && (await readOrNull(codex.config)) !== null) {
-        const staged = resolve(stagingHome, relative(ctx.home, codex.config));
-        await mkdir(dirname(staged), { recursive: true });
-        await copyFile(codex.config, staged);
+      // rulesync merges MCP into shared files: give it the real ones so other keys survive.
+      if (mcp) {
+        for (const real of mergedFiles(ctx)) {
+          if ((await readOrNull(real)) === null) continue;
+          const staged = resolve(stagingOut, relative(realRoot, real));
+          await mkdir(dirname(staged), { recursive: true });
+          await copyFile(real, staged);
+        }
       }
       const resultPath = join(stagingRoot, "result.json");
       const job = {
@@ -235,9 +284,11 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
         inputRoot: forge.source,
         targets: WRITABLE_AGENT_TOOLS.map((t) => RULESYNC_TARGET[t]),
         features,
+        global: !project,
+        outputRoot: stagingOut,
       };
       await runners.worker({
-        cwd: work,
+        cwd: project ? stagingOut : work,
         env: {
           AGENT_FORGE_JOB: JSON.stringify(job),
           AGENT_FORGE_RESULT: resultPath,
@@ -252,14 +303,15 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
     }
 
     const claudeUserJson = claudePaths(ctx).global.userJson;
+    const merged = new Set(mergedFiles(ctx));
     const changes: Change[] = [];
     const produced = new Set<string>();
 
     for (const rel of outputs) {
-      const staged = resolve(stagingHome, rel);
-      if (!inside(staged, stagingHome)) throw new Error(`rulesync produced a path outside the staging home: ${rel}`);
-      const path = resolve(ctx.home, rel);
-      // Claude Code MCP is applied through its CLI, never by writing ~/.claude.json.
+      const staged = resolve(stagingOut, rel);
+      if (!inside(staged, stagingOut)) throw new Error(`rulesync produced a path outside the staging folder: ${rel}`);
+      const path = resolve(realRoot, rel);
+      // Claude Code user MCP is applied through its CLI, never by writing ~/.claude.json.
       if (path === claudeUserJson) continue;
       assertWritable(ctx, path);
       produced.add(path);
@@ -268,15 +320,15 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
       const before = await readOrNull(path);
       if (before === null && after.trim() === "") continue; // nothing worth creating
       const beforeHash = before === null ? null : sha256(before);
-      const merged = path === codex.config;
+      const isMerged = merged.has(path);
       changes.push({
         path,
         action: before === null ? "create" : before === after ? "unchanged" : "modify",
         before,
         after,
         beforeHash,
-        unmanagedOverwrite: !merged && before !== null && before !== after && state.managed[path] !== beforeHash,
-        merged,
+        unmanagedOverwrite: !isMerged && before !== null && before !== after && state.managed[path] !== beforeHash,
+        merged: isMerged,
       });
     }
 
@@ -291,13 +343,18 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
     }
     changes.sort((a, b) => a.path.localeCompare(b.path));
 
-    // MCP: Claude Code through its CLI, plus warnings for servers that would disappear.
-    const commands = mcp ? await planClaudeMcp(ctx, mcp) : [];
+    // MCP: Claude Code user scope through its CLI (project scope is the .mcp.json file),
+    // plus warnings for servers that would disappear.
+    const commands = mcp && !project ? await planClaudeMcp(ctx, mcp) : [];
     const warnings: Warning[] = [];
-    const claudeUnmanaged = commands.filter((c) => c.unmanaged).map((c) => c.name);
-    if (claudeUnmanaged.length) warnings.push({ kind: "unmanaged-mcp", tool: "claude", names: claudeUnmanaged });
     if (mcp) {
       const known = new Set(mcp.map((s) => s.name));
+      const claudeReal = project
+        ? Object.keys(parseJsonObject(await readOrNull(claudePaths(ctx).project.mcpJson)).mcpServers ?? {})
+        : commands.filter((c) => c.unmanaged).map((c) => c.name);
+      const claudeUnmanaged = claudeReal.filter((n) => !known.has(n));
+      if (claudeUnmanaged.length) warnings.push({ kind: "unmanaged-mcp", tool: "claude", names: claudeUnmanaged });
+
       const { parse } = await import("smol-toml");
       const text = await readOrNull(codex.config);
       let real: string[] = [];
@@ -308,6 +365,12 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
       }
       const codexUnmanaged = real.filter((n) => !known.has(n));
       if (codexUnmanaged.length) warnings.push({ kind: "unmanaged-mcp", tool: "codex", names: codexUnmanaged });
+
+      if (project && changes.some((c) => merged.has(c.path) && c.action !== "unchanged")) {
+        warnings.push({ kind: "project-mcp" });
+        const literal = mcp.filter((s) => hasLiteralSecret(s.env) || hasLiteralSecret(s.headers)).map((s) => s.name);
+        if (literal.length) warnings.push({ kind: "project-mcp-secrets", names: literal });
+      }
     }
 
     if (rule?.targets.includes("codex") && (await readOrNull(codex.overrideRulesFile)) !== null) {
@@ -328,6 +391,20 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
   }
 }
 
+function parseJsonObject(text: string | null): { mcpServers?: Record<string, unknown> } {
+  try {
+    const v = text ? JSON.parse(text) : {};
+    return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+/** A value written as-is (not an environment reference like ${TOKEN}). */
+function hasLiteralSecret(record?: Record<string, string>): boolean {
+  return Object.values(record ?? {}).some((v) => v.trim() !== "" && !/^\$\{[A-Za-z_][A-Za-z0-9_]*\}$/.test(v.trim()) && !/^Bearer \$\{[A-Za-z_][A-Za-z0-9_]*\}$/.test(v.trim()));
+}
+
 function newApplyId(): string {
   // Sortable by time, unique, file-name safe.
   return `${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`;
@@ -337,6 +414,7 @@ function newApplyId(): string {
 // apply
 
 export async function apply(ctx: PathContext, set: ChangeSet, runners: Pick<PipelineRunners, "claude">): Promise<ApplyManifest> {
+  assertProjectAllowed(ctx);
   const pending = set.changes.filter((c) => c.action !== "unchanged");
   const commands = set.commands.filter((c) => c.action !== "unchanged");
   if (set.blocked) throw new Error(`Claude Code CLI cannot be used (${set.blocked}).`);

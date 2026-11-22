@@ -5,8 +5,14 @@
 //     source/skills/<name>/SKILL.md app-managed skills, in rulesync source format
 //     backups/<apply-id>/          originals saved before each apply + manifest.json
 //     state.json                   files currently owned by Agent Forge (path → hash)
+//     projects/<id>/               the same layout for one project (ctx.project set),
+//                                  plus project.json naming the project folder
+//
+// The scope is chosen by `ctx.project`: "" = global (~), a path = that project.
+// Project originals stay on this computer; only generated files go into the project.
+import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { stringify as stringifyYaml } from "yaml";
 import {
   MANAGED_NAME,
@@ -24,15 +30,24 @@ export function forgeHome(ctx: PathContext): string {
   return ctx.env.AGENT_FORGE_HOME ?? join(ctx.home, ".agent-forge");
 }
 
+/** Folder name for a project: readable name + hash of the full path. */
+export function projectId(project: string): string {
+  const name = basename(project).replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "project";
+  return `${name}-${createHash("sha256").update(project).digest("hex").slice(0, 12)}`;
+}
+
 export function forgePaths(ctx: PathContext) {
   const root = forgeHome(ctx);
+  const scopeRoot = ctx.project ? join(root, "projects", projectId(ctx.project)) : root;
   return {
     root,
-    source: join(root, "source"),
-    agents: join(root, "source", "subagents"),
-    skills: join(root, "source", "skills"),
-    backups: join(root, "backups"),
-    state: join(root, "state.json"),
+    /** Folder of the current scope (root itself for global). */
+    scopeRoot,
+    source: join(scopeRoot, "source"),
+    agents: join(scopeRoot, "source", "subagents"),
+    skills: join(scopeRoot, "source", "skills"),
+    backups: join(scopeRoot, "backups"),
+    state: join(scopeRoot, "state.json"),
   };
 }
 
@@ -229,6 +244,8 @@ export async function ensureForgeDirs(ctx: PathContext): Promise<void> {
   await mkdir(p.agents, { recursive: true });
   await mkdir(p.skills, { recursive: true });
   await mkdir(p.backups, { recursive: true });
+  // So a person browsing ~/.agent-forge/projects can tell which folder is which.
+  if (ctx.project) await writeFileAtomic(join(p.scopeRoot, "project.json"), `${JSON.stringify({ path: ctx.project }, null, 2)}\n`);
 }
 
 export async function listBackupIds(ctx: PathContext): Promise<string[]> {

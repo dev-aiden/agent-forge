@@ -31,6 +31,9 @@ export interface AppInfo {
 
 export type Language = "system" | "en" | "ko";
 
+/** Where managed items are written: the user's home (global) or the selected project. */
+export type WriteScope = "global" | "project";
+
 export type Theme = "system" | "light" | "dark";
 
 export const TERMINAL_FONT_SIZE = { min: 9, max: 28, default: 13 } as const;
@@ -121,6 +124,8 @@ export interface AgentForgeApi {
   history(): Promise<ApplySummary[]>;
 
 
+  /** Chooses where agents, skills, rules and MCP are read from and written to. */
+  setWriteScope(scope: WriteScope): Promise<WriteScope>;
   getSettings(): Promise<AppSettings>;
   saveSettings(settings: AppSettings): Promise<AppSettings>;
 
@@ -167,6 +172,7 @@ export const IPC = {
   history: "forge:history",
   getSettings: "settings:get",
   saveSettings: "settings:save",
+  setWriteScope: "forge:set-write-scope",
   termSpawn: "term:spawn",
   termWrite: "term:write",
   termResize: "term:resize",

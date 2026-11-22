@@ -38,7 +38,7 @@ import {
   type PipelineRunners,
   type WorkerRunner,
 } from "@agent-forge/adapters";
-import { IPC, type ApplyResult } from "../shared/api";
+import { IPC, type ApplyResult, type WriteScope } from "../shared/api";
 import { cliEnv, findCli } from "./shell-env";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -101,22 +101,37 @@ async function runners(): Promise<PipelineRunners> {
   return { worker: utilityRunner, claude, claudeUnavailable: claude ? undefined : "not-found" };
 }
 
+/**
+ * Where managed items are written. The renderer only chooses "global" or
+ * "project"; the project folder is the one the main process is showing.
+ */
+let writeScope: WriteScope = "global";
+let currentProject: () => string | null = () => null;
+
 function ctx(): PathContext {
-  // Global scope only for now: no project.
-  return { home: homedir(), project: "", env: process.env };
+  if (writeScope === "global") return { home: homedir(), project: "", env: process.env };
+  const project = currentProject();
+  if (!project) throw new Error("Choose a project first.");
+  return { home: homedir(), project, env: process.env };
 }
 
-const isCodexConfig = (path: string) => path === join(homedir(), ".codex", "config.toml");
+/** Previews made by the main process, by id (unmasked), with the scope they were made for. */
+const previews = new Map<string, { set: ChangeSet; ctx: PathContext; at: number }>();
 
-/** Previews made by the main process, by id (unmasked). Apply only accepts these. */
-const previews = new Map<string, { set: ChangeSet; at: number }>();
-
-export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean): void {
+export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean, project: () => string | null): void {
+  currentProject = project;
   const handle = <A extends unknown[], R>(channel: string, fn: (...args: A) => Promise<R>) =>
     ipcMain.handle(channel, (event, ...args) => {
       if (!trusted(event)) throw new Error("untrusted sender");
       return fn(...(args as A));
     });
+
+  handle(IPC.setWriteScope, async (scope: unknown) => {
+    if (scope !== "global" && scope !== "project") throw new Error("unknown scope");
+    if (scope === "project" && !currentProject()) throw new Error("Choose a project first.");
+    writeScope = scope;
+    return writeScope;
+  });
 
   handle(IPC.listAgents, () => listAgents(ctx()));
   handle(IPC.saveAgent, (agent: ManagedAgent, previousName?: string) => saveAgent(ctx(), agent, previousName));
@@ -144,11 +159,12 @@ export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean
   handle(IPC.unmanageMcp, () => unmanageMcp(ctx()));
 
   handle(IPC.previewApply, async () => {
-    const set = await preview(ctx(), await runners());
+    const c = ctx();
+    const set = await preview(c, await runners());
     const now = Date.now();
     for (const [id, p] of previews) if (now - p.at > PREVIEW_TTL_MS) previews.delete(id);
-    previews.set(set.id, { set, at: now });
-    return displayChangeSet(set, isCodexConfig);
+    previews.set(set.id, { set, ctx: c, at: now });
+    return displayChangeSet(set);
   });
 
   handle(IPC.apply, async (id: string): Promise<ApplyResult> => {
@@ -156,7 +172,8 @@ export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean
     if (!entry) return { ok: false, error: "This preview expired. Preview again." };
     previews.delete(id);
     try {
-      return { ok: true, manifest: summary(await apply(ctx(), entry.set, await runners())) };
+      // Applies to the scope the preview was made for, even if the UI switched since.
+      return { ok: true, manifest: summary(await apply(entry.ctx, entry.set, await runners())) };
     } catch (e) {
       if (e instanceof ConflictError) return { ok: false, error: e.message, conflicts: e.paths };
       return { ok: false, error: e instanceof Error ? e.message : String(e) };

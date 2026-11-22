@@ -164,7 +164,6 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
       <section className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-3 border-b border-neutral-800 px-5 py-2.5">
           <h2 className="text-sm font-medium text-neutral-100">{editing ? t("agents.editTitle", { name: editing }) : t(L.newTitle)}</h2>
-          <span className="text-xs text-neutral-500">{t("agents.scopeNote")}</span>
           <div className="ml-auto">{flow.previewButton(dirty, dirty ? t("agents.saveFirst") : undefined)}</div>
         </div>
         {flow.banners}

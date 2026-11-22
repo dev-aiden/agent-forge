@@ -31,12 +31,15 @@ function toManaged(s: McpServer, tool: ToolId): ManagedMcpServer {
   };
 }
 
-/** Adds servers found in Claude Code (user scope) and Codex (global) that Agent Forge does not list yet. */
+/**
+ * Adds servers Agent Forge does not list yet: Claude Code user scope + Codex global,
+ * or in project scope the project's .mcp.json + .codex/config.toml.
+ */
 export async function importMcp(ctx: PathContext): Promise<McpImportResult> {
-  const global = { ...ctx, project: "" };
+  const scope = ctx.project ? "project" : "global";
   const found: [ToolId, McpServer[]][] = [
-    ["claude", (await readClaude(global)).mcpServers.filter((s) => s.source.scope === "global")],
-    ["codex", (await readCodex(global)).mcpServers.filter((s) => s.source.scope === "global")],
+    ["claude", (await readClaude(ctx)).mcpServers.filter((s) => s.source.scope === scope)],
+    ["codex", (await readCodex(ctx)).mcpServers.filter((s) => s.source.scope === scope)],
   ];
 
   const existing = (await readManagedMcp(ctx)) ?? [];
@@ -69,12 +72,13 @@ export interface RuleImportResult {
   differs: boolean;
 }
 
-/** Starts managing the global rule with the current CLAUDE.md (or AGENTS.md). */
+/** Starts managing the top-level rule with the current CLAUDE.md (or AGENTS.md) of the scope. */
 export async function importRule(ctx: PathContext): Promise<RuleImportResult> {
   if (await readManagedRule(ctx)) return { from: null, differs: false };
   const r = new Reader();
-  const claude = await r.text(claudePaths(ctx).global.rulesFile);
-  const codex = await r.text(codexPaths(ctx).global.rulesFile);
+  const scope = ctx.project ? "project" : "global";
+  const claude = await r.text(claudePaths(ctx)[scope].rulesFile);
+  const codex = await r.text(codexPaths(ctx)[scope].rulesFile);
   const body = claude ?? codex ?? "";
   await saveManagedRule(ctx, { body, targets: [...WRITABLE_AGENT_TOOLS] });
   return { from: claude !== null ? "claude" : codex !== null ? "codex" : null, differs: claude !== null && codex !== null && claude !== codex };

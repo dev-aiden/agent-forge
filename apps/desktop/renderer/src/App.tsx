@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Item } from "@agent-forge/model";
-import type { AppSettings, Overview } from "../../shared/api";
+import type { AppSettings, Overview, WriteScope } from "../../shared/api";
 import { ItemDetail } from "./components/ItemDetail";
 import { ItemList } from "./components/ItemList";
 import { SettingsDialog } from "./components/SettingsDialog";
@@ -50,6 +50,8 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
   const [autoUpdatedAt, setAutoUpdatedAt] = useState<string | null>(null);
   const [view, setView] = useState<View>("overview");
   const [showSettings, setShowSettings] = useState(false);
+  /** Where managed items are written; confirmed by the main process before views load. */
+  const [scope, setScope] = useState<WriteScope>("global");
   const notified = useRef(false);
   const projectRef = useRef<string | null | undefined>(undefined);
   projectRef.current = project;
@@ -116,6 +118,19 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
   const shortPath = useMemo(() => makeShortPath(overview?.home ?? "", overview?.project ?? null), [overview]);
   const homePath = useMemo(() => makeShortPath(overview?.home ?? "", null), [overview]);
 
+  async function changeScope(next: WriteScope) {
+    try {
+      setScope(await window.agentForge.setWriteScope(next));
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }
+
+  // Without a project, only the global scope exists.
+  useEffect(() => {
+    if (project === null && scope === "project") void changeScope("global");
+  }, [project]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function chooseProject() {
     const dir = await window.agentForge.pickProject();
     if (dir) {
@@ -175,10 +190,14 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
 
       {error && <div className="border-b border-red-900 bg-red-950/50 px-4 py-2 text-xs text-red-300">{error}</div>}
 
-      {view === "agents" && <ManagedView key="agent" kind="agent" shortPath={homePath} />}
-      {view === "skills" && <ManagedView key="skill" kind="skill" shortPath={homePath} />}
-      {view === "rules" && <RulesView shortPath={homePath} />}
-      {view === "mcp" && <McpView shortPath={homePath} />}
+      {(view === "agents" || view === "skills" || view === "rules" || view === "mcp") && (
+        <ScopeBar scope={scope} project={project ?? null} shortPath={homePath} onChange={changeScope} />
+      )}
+      {/* Keyed by scope and project so each one loads its own list. */}
+      {view === "agents" && <ManagedView key={`agent-${scope}-${project}`} kind="agent" shortPath={homePath} />}
+      {view === "skills" && <ManagedView key={`skill-${scope}-${project}`} kind="skill" shortPath={homePath} />}
+      {view === "rules" && <RulesView key={`rules-${scope}-${project}`} shortPath={homePath} />}
+      {view === "mcp" && <McpView key={`mcp-${scope}-${project}`} shortPath={homePath} />}
 
       {/* Kept mounted so running CLIs survive switching views. */}
       <TerminalView
@@ -245,4 +264,42 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-1 items-center justify-center text-neutral-500">{children}</div>;
+}
+
+/** Chooses whether managed items go to the user's global config or the selected project. */
+function ScopeBar({
+  scope,
+  project,
+  shortPath,
+  onChange,
+}: {
+  scope: WriteScope;
+  project: string | null;
+  shortPath(path: string): string;
+  onChange(scope: WriteScope): void;
+}) {
+  const t = useT();
+  const option = (value: WriteScope, label: string, disabled = false) => (
+    <button
+      disabled={disabled}
+      onClick={() => onChange(value)}
+      className={`rounded px-2.5 py-0.5 text-xs disabled:opacity-40 ${
+        scope === value ? "bg-neutral-800 text-neutral-100" : "text-neutral-500 hover:text-neutral-300"
+      }`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="flex items-center gap-3 border-b border-neutral-800 bg-neutral-900/60 px-4 py-1.5">
+      <span className="text-xs text-neutral-400">{t("writeScope.label")}</span>
+      <div className="flex rounded-md border border-neutral-800 p-0.5">
+        {option("global", t("writeScope.global"))}
+        {option("project", project ? t("writeScope.project", { name: shortPath(project) }) : t("writeScope.projectNone"), !project)}
+      </div>
+      <span className="truncate text-xs text-neutral-500">
+        {scope === "project" ? t("writeScope.projectNote") : project ? t("writeScope.globalNote") : t("writeScope.pickHint")}
+      </span>
+    </div>
+  );
 }

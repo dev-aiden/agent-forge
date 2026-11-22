@@ -2,7 +2,7 @@
 // folder, so rulesync can only ever write inside that folder. The parent compares
 // the staged files with the real ones and applies them itself (with backups).
 //
-// Input:  AGENT_FORGE_JOB    JSON { stagingRoot, stagingHome, inputRoot, targets, features }
+// Input:  AGENT_FORGE_JOB    JSON { stagingRoot, stagingHome, inputRoot, targets, features, global, outputRoot }
 // Output: AGENT_FORGE_RESULT path of a JSON file to write { outputs: string[] }
 import { realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -15,6 +15,9 @@ interface Job {
   inputRoot: string;
   targets: string[];
   features: string[];
+  /** false = project mode: generate into `outputRoot` (a staging project folder). */
+  global?: boolean;
+  outputRoot?: string;
 }
 
 function fail(message: string): never {
@@ -38,9 +41,13 @@ if (!inside(home, root)) fail("staging home is outside the staging root");
 if (real(process.env.HOME_DIR) !== home) fail("HOME_DIR is not the staging home");
 if (real(homedir()) !== home) fail("os.homedir() is not the staging home");
 if (!inside(realpathSync(process.cwd()), root)) fail("cwd is outside the staging root");
+const global = job.global !== false;
+const outputRoot = global ? home : realpathSync(job.outputRoot ?? "");
+if (!inside(outputRoot, root)) fail("output folder is outside the staging root");
 
 const result = await generate({
-  global: true,
+  global,
+  ...(global ? {} : { outputRoots: [outputRoot] }),
   inputRoots: [job.inputRoot],
   targets: job.targets as never,
   features: job.features as never,
@@ -50,7 +57,7 @@ const result = await generate({
 
 if (result.sourceLoadFailed) fail(`could not read source: ${result.sourceLoadFailedFeatures.join(", ")}`);
 
-// Paths are relative to the output root (the staging home).
+// Paths are relative to the output root (the staging home or staging project).
 const outputs = [
   ...result.rulesPaths,
   ...result.mcpPaths,

@@ -1,5 +1,6 @@
 // What the renderer may see of a ChangeSet: the same changes, with secrets in
 // MCP config masked. The real ChangeSet stays in the main process.
+import { basename } from "node:path";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import { MASK, maskArgs, maskUrl } from "@agent-forge/model";
 import type { ClaudeMcpDef } from "./claude-mcp";
@@ -41,12 +42,42 @@ export function maskCodexConfig(text: string | null): string | null {
   }
 }
 
-export function displayChangeSet(set: ChangeSet, isCodexConfig: (path: string) => boolean): ChangeSet {
+/** Masks MCP secrets in a Claude Code .mcp.json (project scope). */
+export function maskMcpJson(text: string | null): string | null {
+  if (text === null) return null;
+  try {
+    const data = JSON.parse(text) as { mcpServers?: Record<string, Record<string, unknown>> };
+    for (const s of Object.values(data.mcpServers ?? {})) {
+      if (!s || typeof s !== "object") continue;
+      if (s.env) s.env = maskRecord(s.env);
+      if (s.headers) s.headers = maskRecord(s.headers);
+      if (Array.isArray(s.args)) s.args = maskArgs(s.args.map(String));
+      if (typeof s.url === "string") s.url = maskUrl(s.url);
+    }
+    return `${JSON.stringify(data, null, 2)}\n`;
+  } catch {
+    return "(hidden: could not parse this file to hide secrets)";
+  }
+}
+
+/**
+ * Which masker a tool file needs, by name. The only config.toml Agent Forge writes is
+ * Codex's (its folder may be $CODEX_HOME), and the only .mcp.json is Claude Code's.
+ */
+function maskerFor(path: string): ((text: string | null) => string | null) | null {
+  const name = basename(path);
+  if (name === "config.toml") return maskCodexConfig;
+  if (name === ".mcp.json") return maskMcpJson;
+  return null;
+}
+
+export function displayChangeSet(set: ChangeSet): ChangeSet {
   return {
     ...set,
-    changes: set.changes.map((c) =>
-      isCodexConfig(c.path) ? { ...c, before: maskCodexConfig(c.before), after: maskCodexConfig(c.after) } : c,
-    ),
+    changes: set.changes.map((c) => {
+      const mask = maskerFor(c.path);
+      return mask ? { ...c, before: mask(c.before), after: mask(c.after) } : c;
+    }),
     commands: set.commands.map((c) => ({ ...c, before: maskClaudeDef(c.before), after: maskClaudeDef(c.after) })),
   };
 }
