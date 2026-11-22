@@ -1,7 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { IPC, type AppInfo } from "../shared/api";
+import { IPC, type AppInfo, type AppSettings } from "../shared/api";
 import { homedir } from "node:os";
 import { buildOverview, overviewFingerprint, validateProject } from "./overview";
 import { ConfigWatcher, watchedPaths } from "./watch";
@@ -74,6 +74,32 @@ function trusted(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
   return mainWindow !== null && event.sender === mainWindow.webContents;
 }
 
+/**
+ * Minimal menu. The default one maps Cmd/Ctrl +/-/0 to page zoom, which the
+ * terminal uses for its font size. macOS keeps an Edit menu so copy/paste work.
+ */
+function setMenu(): void {
+  const dev = !app.isPackaged;
+  const view: Electron.MenuItemConstructorOptions = {
+    role: "viewMenu",
+    submenu: [{ role: "reload" }, ...(dev ? [{ role: "toggleDevTools" } as const] : []), { type: "separator" }, { role: "togglefullscreen" }],
+  };
+  if (process.platform === "darwin") {
+    Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: "appMenu" }, { role: "editMenu" }, view, { role: "windowMenu" }]));
+  } else {
+    Menu.setApplicationMenu(dev ? Menu.buildFromTemplate([view]) : null);
+  }
+}
+
+const windowBackground = () => (nativeTheme.shouldUseDarkColors ? "#0a0a0a" : "#ffffff");
+
+/** Native parts (title bar, scrollbars, prefers-color-scheme) follow the chosen theme. */
+function applyTheme(settings: AppSettings): AppSettings {
+  nativeTheme.themeSource = settings.theme;
+  mainWindow?.setBackgroundColor(windowBackground());
+  return settings;
+}
+
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1200,
@@ -81,7 +107,7 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 560,
     title: "Agent Forge",
-    backgroundColor: "#0a0a0a",
+    backgroundColor: windowBackground(),
     show: false,
     webPreferences: {
       preload: join(here, "../preload/index.cjs"),
@@ -148,11 +174,11 @@ registerTerminalIpc(trusted, () => watchedProject ?? null);
 const settingsCtx = () => ({ home: homedir(), project: "", env: process.env });
 ipcMain.handle(IPC.getSettings, (event) => {
   if (!trusted(event)) throw new Error("untrusted sender");
-  return readSettings(settingsCtx());
+  return readSettings(settingsCtx()).then(applyTheme);
 });
 ipcMain.handle(IPC.saveSettings, (event, settings: unknown) => {
   if (!trusted(event)) throw new Error("untrusted sender");
-  return writeSettings(settingsCtx(), settings);
+  return writeSettings(settingsCtx(), settings).then(applyTheme);
 });
 
 ipcMain.on(IPC.rendererReady, (event, error: unknown) => {
@@ -170,7 +196,9 @@ ipcMain.on(IPC.rendererReady, (event, error: unknown) => {
   );
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  applyTheme(await readSettings(settingsCtx()));
+  setMenu();
   if (SMOKE) setTimeout(() => smokeFail(`timeout after ${SMOKE_TIMEOUT_MS}ms`), SMOKE_TIMEOUT_MS);
   mainWindow = createWindow();
   app.on("activate", () => {

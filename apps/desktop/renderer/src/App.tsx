@@ -6,6 +6,7 @@ import { ItemList } from "./components/ItemList";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { errorText, makeShortPath } from "./format";
 import { I18nProvider, resolveLanguage, useT } from "./i18n";
+import { ThemeProvider, useResolvedTheme } from "./theme";
 import { ManagedView } from "./views/ManagedView";
 import { McpView } from "./views/McpView";
 import { RulesView } from "./views/RulesView";
@@ -17,19 +18,23 @@ export function App() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
 
   useEffect(() => {
-    window.agentForge.getSettings().then(setSettings, () => setSettings({ language: "system", disabledTools: [] }));
+    window.agentForge.getSettings().then(setSettings, () => setSettings({ language: "system", theme: "system", terminalFontSize: 13, disabledTools: [] }));
   }, []);
+
+  const theme = useResolvedTheme(settings?.theme ?? "system");
 
   if (!settings) return null;
   return (
     <I18nProvider lang={resolveLanguage(settings.language)}>
-      <Main
-        settings={settings}
-        onSettings={(next) => {
-          setSettings(next);
-          void window.agentForge.saveSettings(next).then(setSettings);
-        }}
-      />
+      <ThemeProvider value={theme}>
+        <Main
+          settings={settings}
+          onSettings={(next) => {
+            setSettings(next);
+            void window.agentForge.saveSettings(next).then(setSettings);
+          }}
+        />
+      </ThemeProvider>
     </I18nProvider>
   );
 }
@@ -176,7 +181,13 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
       {view === "mcp" && <McpView shortPath={homePath} />}
 
       {/* Kept mounted so running CLIs survive switching views. */}
-      <TerminalView tools={visibleTools} visible={view === "terminal"} shortPath={homePath} />
+      <TerminalView
+        tools={visibleTools}
+        visible={view === "terminal"}
+        shortPath={homePath}
+        fontSize={settings.terminalFontSize}
+        onFontSize={(terminalFontSize) => onSettings({ ...settings, terminalFontSize })}
+      />
 
       {view === "overview" && (
         <>

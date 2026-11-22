@@ -4,13 +4,14 @@
 //
 // The renderer can only ask for a known tool or the user's shell — never an
 // arbitrary command line.
-import { ipcMain, type IpcMainInvokeEvent, type WebContents } from "electron";
+import { clipboard, ipcMain, shell, type IpcMainInvokeEvent, type WebContents } from "electron";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { TOOL_IDS, type ToolId } from "@agent-forge/model";
 import type { IPty } from "node-pty";
 import { IPC, type LaunchTarget, type TerminalSession } from "../shared/api";
 import { cliEnv, findCli } from "./shell-env";
+import { isWebUrl } from "./url";
 
 // Loaded lazily so a broken native module cannot prevent the app from starting.
 type NodePty = typeof import("node-pty");
@@ -119,6 +120,17 @@ export function registerTerminalIpc(
     const c = Math.floor(Number(cols));
     const r = Math.floor(Number(rows));
     if (c > 1 && r > 1 && c < 1000 && r < 1000) owned(event, id)?.pty.resize(c, r);
+  });
+  ipcMain.on(IPC.openExternal, (event, url: unknown) => {
+    if (!trusted(event) || !isWebUrl(url)) return;
+    void shell.openExternal(url);
+  });
+  ipcMain.handle(IPC.clipboardRead, (event) => {
+    if (!trusted(event)) throw new Error("untrusted sender");
+    return clipboard.readText();
+  });
+  ipcMain.on(IPC.clipboardWrite, (event, text: unknown) => {
+    if (trusted(event) && typeof text === "string") clipboard.writeText(text);
   });
   ipcMain.on(IPC.termKill, (event, id: unknown) => {
     if (!trusted(event)) return;

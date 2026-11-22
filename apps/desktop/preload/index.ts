@@ -50,6 +50,9 @@ const api: AgentForgeApi = {
   termKill: (id) => ipcRenderer.send(IPC.termKill, id),
   onTermData: (callback) => subscribe(IPC.termData, (id: number, data: string) => callback(id, data)),
   onTermExit: (callback) => subscribe(IPC.termExit, (id: number, code: number) => callback(id, code)),
+  openExternal: (url) => ipcRenderer.send(IPC.openExternal, url),
+  clipboardRead: () => ipcRenderer.invoke(IPC.clipboardRead),
+  clipboardWrite: (text) => ipcRenderer.send(IPC.clipboardWrite, text),
   notifyReady: (error) => ipcRenderer.send(IPC.rendererReady, typeof error === "string" ? error : undefined),
 };
 

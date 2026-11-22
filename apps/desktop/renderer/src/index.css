@@ -1,19 +1,75 @@
 @import "tailwindcss";
 
+/*
+ * Themes. Components use the neutral scale as "dark UI" roles (950 = page
+ * background, 100 = strongest text). The light theme flips the scale and the
+ * accent colors, so components need no per-theme classes.
+ */
+
+/* Dark: secondary text (400–600) is brighter than Tailwind's default for readability. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-neutral-400: #bdbdbd;
+  --color-neutral-500: #a6a6a6;
+  --color-neutral-600: #8c8c8c;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-neutral-50: #0a0a0a;
+  --color-neutral-100: #171717;
+  --color-neutral-200: #262626;
+  --color-neutral-300: #333333;
+  --color-neutral-400: #474747;
+  --color-neutral-500: #595959;
+  --color-neutral-600: #6b6b6b;
+  --color-neutral-700: #cccccc;
+  --color-neutral-800: #e0e0e0;
+  --color-neutral-900: #f3f3f3;
+  --color-neutral-950: #ffffff;
+
+  --color-red-200: #7f1d1d;
+  --color-red-300: #b91c1c;
+  --color-red-400: #dc2626;
+  --color-red-800: #fca5a5;
+  --color-red-900: #fecaca;
+  --color-red-950: #fef2f2;
+
+  --color-emerald-200: #064e3b;
+  --color-emerald-300: #047857;
+  --color-emerald-400: #059669;
+  --color-emerald-800: #6ee7b7;
+  --color-emerald-900: #a7f3d0;
+  --color-emerald-950: #ecfdf5;
+
+  --color-amber-200: #78350f;
+  --color-amber-300: #92400e;
+  --color-amber-400: #b45309;
+  --color-amber-500: #b45309;
+  --color-amber-800: #fcd34d;
+  --color-amber-900: #fde68a;
+  --color-amber-950: #fffbeb;
+
+  --color-sky-300: #0369a1;
+  --color-sky-400: #0284c7;
+  --color-sky-800: #7dd3fc;
+  --color-sky-950: #f0f9ff;
+}
+
 @layer base {
   html,
   body {
-    @apply bg-neutral-950 antialiased;
+    @apply bg-neutral-950 text-neutral-200 antialiased;
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply rounded-md bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-40;
+    @apply rounded-md bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-900 hover:opacity-85 disabled:opacity-40;
   }
   .input {
-    @apply w-full rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600;
+    @apply w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-500;
   }
   .btn {
     @apply rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 hover:bg-neutral-800 disabled:opacity-50;

@@ -3,11 +3,17 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { forgeHome, writeFileAtomic, type PathContext } from "@agent-forge/adapters";
 import { TOOL_IDS, type ToolId } from "@agent-forge/model";
-import type { AppSettings, Language } from "../shared/api";
+import { TERMINAL_FONT_SIZE, type AppSettings, type Language, type Theme } from "../shared/api";
 
-export const DEFAULT_SETTINGS: AppSettings = { language: "system", disabledTools: [] };
+export const DEFAULT_SETTINGS: AppSettings = {
+  language: "system",
+  theme: "system",
+  terminalFontSize: TERMINAL_FONT_SIZE.default,
+  disabledTools: [],
+};
 
 const LANGUAGES: readonly Language[] = ["system", "en", "ko"];
+const THEMES: readonly Theme[] = ["system", "light", "dark"];
 
 function settingsPath(ctx: PathContext): string {
   return join(forgeHome(ctx), "settings.json");
@@ -20,7 +26,12 @@ export function sanitizeSettings(input: unknown): AppSettings {
   const disabledTools = Array.isArray(s.disabledTools)
     ? [...new Set(s.disabledTools.filter((t): t is ToolId => TOOL_IDS.includes(t as ToolId)))]
     : [];
-  return { language, disabledTools };
+  const theme = THEMES.includes(s.theme as Theme) ? (s.theme as Theme) : DEFAULT_SETTINGS.theme;
+  const size = Number(s.terminalFontSize);
+  const terminalFontSize = Number.isInteger(size) && size >= TERMINAL_FONT_SIZE.min && size <= TERMINAL_FONT_SIZE.max
+    ? size
+    : DEFAULT_SETTINGS.terminalFontSize;
+  return { language, theme, terminalFontSize, disabledTools };
 }
 
 export async function readSettings(ctx: PathContext): Promise<AppSettings> {

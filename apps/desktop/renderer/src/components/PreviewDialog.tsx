@@ -41,7 +41,7 @@ export function PreviewDialog({ set, busy, error, shortPath, onApply, onCancel }
   const toggle = (key: string) => setOpen(open === key ? null : key);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/75 backdrop-blur-[1px] p-8">
       <div className="flex max-h-full w-full max-w-4xl flex-col rounded-lg border border-neutral-800 bg-neutral-900 shadow-2xl">
         <header className="border-b border-neutral-800 px-5 py-4">
           <h2 className="text-base font-semibold text-neutral-100">{t("preview.title")}</h2>

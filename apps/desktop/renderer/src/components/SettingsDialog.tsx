@@ -1,5 +1,5 @@
 import { TOOL_IDS, type ToolId } from "@agent-forge/model";
-import type { AppSettings, Language, ToolOverview } from "../../../shared/api";
+import type { AppSettings, Language, Theme, ToolOverview } from "../../../shared/api";
 import { useT } from "../i18n";
 
 const TOOL_LABEL: Record<ToolId, string> = {
@@ -24,6 +24,12 @@ export function SettingsDialog({ settings, tools, onChange, onClose }: Props) {
     { value: "en", label: "English" },
   ];
 
+  const themes: { value: Theme; label: string }[] = [
+    { value: "system", label: t("settings.theme.system") },
+    { value: "light", label: t("settings.theme.light") },
+    { value: "dark", label: t("settings.theme.dark") },
+  ];
+
   const toggleTool = (id: ToolId) => {
     const off = settings.disabledTools.includes(id);
     onChange({
@@ -33,7 +39,7 @@ export function SettingsDialog({ settings, tools, onChange, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-8" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/75 backdrop-blur-[1px] p-8" onClick={onClose}>
       <div
         className="w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -57,6 +63,23 @@ export function SettingsDialog({ settings, tools, onChange, onClose }: Props) {
                   onChange={() => onChange({ ...settings, language: l.value })}
                 />
                 {l.label}
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-2 border-t border-neutral-800 px-5 py-4">
+          <h3 className="text-xs font-medium text-neutral-300">{t("settings.theme")}</h3>
+          <div className="flex gap-4">
+            {themes.map((th) => (
+              <label key={th.value} className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="theme"
+                  checked={settings.theme === th.value}
+                  onChange={() => onChange({ ...settings, theme: th.value })}
+                />
+                {th.label}
               </label>
             ))}
           </div>

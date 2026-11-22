@@ -31,8 +31,15 @@ export interface AppInfo {
 
 export type Language = "system" | "en" | "ko";
 
+export type Theme = "system" | "light" | "dark";
+
+export const TERMINAL_FONT_SIZE = { min: 9, max: 28, default: 13 } as const;
+
 export interface AppSettings {
   language: Language;
+  theme: Theme;
+  /** Terminal tab font size in px. */
+  terminalFontSize: number;
   /** Tools hidden everywhere in the app (overview, terminal). */
   disabledTools: ToolId[];
 }
@@ -124,6 +131,10 @@ export interface AgentForgeApi {
   termKill(id: number): void;
   onTermData(callback: (id: number, data: string) => void): () => void;
   onTermExit(callback: (id: number, exitCode: number) => void): () => void;
+  /** Opens an http(s) link from terminal output in the default browser. */
+  openExternal(url: string): void;
+  clipboardRead(): Promise<string>;
+  clipboardWrite(text: string): void;
 
   /** Called once the first screen has rendered (used by --smoke-test). Pass an error message on failure. */
   notifyReady(error?: string): void;
@@ -162,4 +173,7 @@ export const IPC = {
   termKill: "term:kill",
   termData: "term:data",
   termExit: "term:exit",
+  openExternal: "shell:open-external",
+  clipboardRead: "clipboard:read",
+  clipboardWrite: "clipboard:write",
 } as const;
