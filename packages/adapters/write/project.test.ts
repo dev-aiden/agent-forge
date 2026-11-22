@@ -23,7 +23,7 @@ async function put(path: string, content: string) {
 async function filesUnder(dir: string): Promise<string[]> {
   const out: string[] = [];
   for (const e of await readdir(dir, { withFileTypes: true, recursive: true }).catch(() => [])) {
-    if (e.isFile()) out.push(relative(dir, join(e.parentPath, e.name)));
+    if (e.isFile()) out.push(relative(dir, join(e.parentPath, e.name)).replaceAll("\\", "/"));
   }
   return out.sort();
 }
@@ -58,7 +58,7 @@ test("agents, skills and rule are written into the project, not the home folder"
 
   const set = await preview(ctx, runners);
   assert.deepEqual(
-    set.changes.filter((c) => c.action !== "unchanged").map((c) => [relative(project, c.path), c.action]),
+    set.changes.filter((c) => c.action !== "unchanged").map((c) => [relative(project, c.path).replaceAll("\\", "/"), c.action]),
     [
       [".agents/skills/lint/SKILL.md", "create"],
       [".claude/agents/rev.md", "create"],
