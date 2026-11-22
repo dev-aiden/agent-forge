@@ -15,3 +15,22 @@ export const READERS: Partial<Record<ToolId, (ctx: PathContext) => Promise<ToolC
   claude: readClaude,
   codex: readCodex,
 };
+
+// Writing app-managed items (preview → apply → undo).
+export {
+  apply,
+  assertWritable,
+  ConflictError,
+  history,
+  preview,
+  undo,
+  writableRoots,
+  type ApplyManifest,
+  type Change,
+  type ChangeAction,
+  type ChangeSet,
+  type ManifestEntry,
+  type UndoResult,
+  type WorkerRunner,
+} from "./write/pipeline";
+export { deleteAgent, forgeHome, listAgents, saveAgent } from "./write/store";

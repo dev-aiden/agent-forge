@@ -32,7 +32,10 @@
 - 렌더러는 Node 접근 없이(contextIsolation) preload로 노출한 API만 쓴다.
 
 ## 현재 단계와 다음 작업
-- 지금: 2주차 — 공통 데이터 구조 + Claude Code·Codex 어댑터(읽기), 설정 한눈에 보기 화면
+- 지금: 3주차 — 첫 쓰기 기능. 에이전트를 앱에서 만들어 Claude Code·Codex 전역에 적용 (미리보기 → 백업 → 적용 → 되돌리기)
+  - 쓰기 경로: `packages/adapters/write/` (rulesync는 임시 홈을 가리키는 별도 프로세스에서만 실행, 쓰기 허용 폴더 제한)
+  - 다음 후보: 스킬 쓰기 → 규칙·MCP 쓰기(rulesync가 MCP 목록·최상위 규칙을 통째로 교체하므로 기존 내용 가져와 합치기 필요, `~/.claude.json` 쓰기는 원칙 2 관련 결정 필요)
+- 2주차 완료: 공통 데이터 구조(`packages/model`), Claude Code·Codex 읽기 어댑터, 설정 한눈에 보기 화면, 파일 감시 자동 갱신
 - 1주차 완료:
   - `npm run scan` — 4개 도구 설정 경로·형식 스캐너 (`packages/adapters/scripts/scan.ts`)
   - rulesync 조사 — `docs/ko/rulesync-research.md` (MIT, 라이브러리 사용 가능. 임시 폴더 생성 → diff → 백업 후 적용 방식으로 감싼다)

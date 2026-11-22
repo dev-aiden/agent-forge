@@ -4,6 +4,9 @@ import type { Overview } from "../../shared/api";
 import { ItemDetail } from "./components/ItemDetail";
 import { ItemList } from "./components/ItemList";
 import { makeShortPath } from "./format";
+import { AgentsView } from "./views/AgentsView";
+
+type View = "overview" | "agents";
 
 export function App() {
   const [project, setProject] = useState<string | null | undefined>(undefined);
@@ -13,6 +16,7 @@ export function App() {
   const [toolId, setToolId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [autoUpdatedAt, setAutoUpdatedAt] = useState<string | null>(null);
+  const [view, setView] = useState<View>("overview");
   const notified = useRef(false);
   const projectRef = useRef<string | null | undefined>(undefined);
   projectRef.current = project;
@@ -91,6 +95,17 @@ export function App() {
       {/* Top bar */}
       <header className="flex items-center gap-3 border-b border-neutral-800 px-4 py-2.5">
         <h1 className="mr-2 text-base font-semibold tracking-tight text-neutral-100">Agent Forge</h1>
+        <div className="flex rounded-md border border-neutral-800 p-0.5">
+          {(["overview", "agents"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`rounded px-2.5 py-0.5 text-xs ${view === v ? "bg-neutral-800 text-neutral-100" : "text-neutral-500 hover:text-neutral-300"}`}
+            >
+              {v === "overview" ? "Overview" : "Agents"}
+            </button>
+          ))}
+        </div>
         <div className="flex min-w-0 items-center gap-2 rounded-md border border-neutral-800 px-2 py-1">
           <span className="text-xs text-neutral-500">Project</span>
           <span className="truncate font-mono text-xs" title={project ?? undefined}>
@@ -120,6 +135,10 @@ export function App() {
 
       {error && <div className="border-b border-red-900 bg-red-950/50 px-4 py-2 text-xs text-red-300">{error}</div>}
 
+      {view === "agents" ? (
+        <AgentsView shortPath={makeShortPath(overview?.home ?? "", null)} />
+      ) : (
+      <>
       {/* Tool tabs */}
       <nav className="flex gap-1 border-b border-neutral-800 px-3">
         {visibleTools.map((t) => {
@@ -162,6 +181,8 @@ export function App() {
           </>
         )}
       </main>
+      </>
+      )}
     </div>
   );
 }

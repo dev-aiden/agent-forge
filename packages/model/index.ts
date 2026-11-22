@@ -163,3 +163,26 @@ export function maskMcpServer(server: McpServer): McpServer {
 export function maskToolConfig(config: ToolConfig): ToolConfig {
   return { ...config, mcpServers: config.mcpServers.map(maskMcpServer) };
 }
+
+// ---------------------------------------------------------------------------
+// App-managed items (stored in ~/.agent-forge/source as a rulesync source tree)
+
+/** An agent created in Agent Forge and applied to the selected tools. */
+export interface ManagedAgent {
+  /** File-safe identifier: letters, digits, `-` and `_`. Also the output file name. */
+  name: string;
+  description: string;
+  /** System prompt / instructions. */
+  body: string;
+  /** Claude Code model alias (e.g. "sonnet") or full model id. */
+  model?: string;
+  /** Claude Code tool allowlist. Empty / undefined = inherit all tools. */
+  tools?: string[];
+  /** Tools to apply this agent to. */
+  targets: ToolId[];
+}
+
+export const MANAGED_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+
+/** Tools Agent Forge can write agents to so far. */
+export const WRITABLE_AGENT_TOOLS: readonly ToolId[] = ["claude", "codex"];

@@ -1,5 +1,12 @@
 // Types shared by main, preload and renderer. Keep this file free of runtime imports.
-import type { ToolConfig, ToolId } from "@agent-forge/model";
+import type { ApplyManifest, ChangeSet, UndoResult } from "@agent-forge/adapters";
+import type { ManagedAgent, ToolConfig, ToolId } from "@agent-forge/model";
+
+export type { ApplyManifest, Change, ChangeSet, UndoResult } from "@agent-forge/adapters";
+
+export type ApplyResult =
+  | { ok: true; manifest: ApplyManifest }
+  | { ok: false; error: string; conflicts?: string[] };
 
 export interface AppInfo {
   name: string;
@@ -46,6 +53,18 @@ export interface AgentForgeApi {
    * Fires only when the overview actually changed. Returns an unsubscribe function.
    */
   onOverviewChanged(callback: (overview: Overview) => void): () => void;
+
+  // App-managed agents (global scope). Writing goes preview → apply(previewId) → undo.
+  listAgents(): Promise<ManagedAgent[]>;
+  saveAgent(agent: ManagedAgent, previousName?: string): Promise<ManagedAgent>;
+  deleteAgent(name: string): Promise<void>;
+  /** Computes changes without touching tool config. */
+  previewApply(): Promise<ChangeSet>;
+  /** Applies a preview made by the main process (by id only). */
+  apply(previewId: string): Promise<ApplyResult>;
+  undo(applyId: string): Promise<UndoResult>;
+  history(): Promise<ApplyManifest[]>;
+
   /** Called once the first screen has rendered (used by --smoke-test). Pass an error message on failure. */
   notifyReady(error?: string): void;
 }
@@ -56,4 +75,11 @@ export const IPC = {
   pickProject: "dialog:pick-project",
   overviewChanged: "config:overview-changed",
   rendererReady: "app:renderer-ready",
+  listAgents: "forge:list-agents",
+  saveAgent: "forge:save-agent",
+  deleteAgent: "forge:delete-agent",
+  previewApply: "forge:preview",
+  apply: "forge:apply",
+  undo: "forge:undo",
+  history: "forge:history",
 } as const;

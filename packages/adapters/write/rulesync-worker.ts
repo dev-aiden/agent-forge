@@ -1,0 +1,62 @@
+// Runs rulesync `generate` in its own process whose home directory is a staging
+// folder, so rulesync can only ever write inside that folder. The parent compares
+// the staged files with the real ones and applies them itself (with backups).
+//
+// Input:  AGENT_FORGE_JOB    JSON { stagingRoot, stagingHome, inputRoot, targets, features }
+// Output: AGENT_FORGE_RESULT path of a JSON file to write { outputs: string[] }
+import { realpathSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { isAbsolute, relative } from "node:path";
+import { generate } from "rulesync";
+
+interface Job {
+  stagingRoot: string;
+  stagingHome: string;
+  inputRoot: string;
+  targets: string[];
+  features: string[];
+}
+
+function fail(message: string): never {
+  console.error(`rulesync-worker: ${message}`);
+  process.exit(2);
+}
+
+const job = JSON.parse(process.env.AGENT_FORGE_JOB ?? "null") as Job | null;
+const resultPath = process.env.AGENT_FORGE_RESULT;
+if (!job || !resultPath) fail("missing job");
+
+// Refuse to run unless every home lookup and the cwd point into the staging area.
+const real = (p: string | undefined) => (p ? realpathSync(p) : undefined);
+const inside = (child: string, parent: string) => {
+  const rel = relative(parent, child);
+  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+};
+const root = realpathSync(job.stagingRoot);
+const home = realpathSync(job.stagingHome);
+if (!inside(home, root)) fail("staging home is outside the staging root");
+if (real(process.env.HOME_DIR) !== home) fail("HOME_DIR is not the staging home");
+if (real(homedir()) !== home) fail("os.homedir() is not the staging home");
+if (!inside(realpathSync(process.cwd()), root)) fail("cwd is outside the staging root");
+
+const result = await generate({
+  global: true,
+  inputRoots: [job.inputRoot],
+  targets: job.targets as never,
+  features: job.features as never,
+  delete: false,
+  silent: true,
+});
+
+if (result.sourceLoadFailed) fail(`could not read source: ${result.sourceLoadFailedFeatures.join(", ")}`);
+
+// Paths are relative to the output root (the staging home).
+const outputs = [
+  ...result.rulesPaths,
+  ...result.mcpPaths,
+  ...result.subagentsPaths,
+  ...result.skillsPaths,
+  ...result.commandsPaths,
+];
+writeFileSync(resultPath, JSON.stringify({ outputs }));
+process.exit(0);

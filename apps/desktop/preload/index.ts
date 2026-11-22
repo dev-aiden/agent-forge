@@ -14,6 +14,13 @@ const api: AgentForgeApi = {
       ipcRenderer.removeListener(IPC.overviewChanged, listener);
     };
   },
+  listAgents: () => ipcRenderer.invoke(IPC.listAgents),
+  saveAgent: (agent, previousName) => ipcRenderer.invoke(IPC.saveAgent, agent, previousName),
+  deleteAgent: (name) => ipcRenderer.invoke(IPC.deleteAgent, name),
+  previewApply: () => ipcRenderer.invoke(IPC.previewApply),
+  apply: (previewId) => ipcRenderer.invoke(IPC.apply, previewId),
+  undo: (applyId) => ipcRenderer.invoke(IPC.undo, applyId),
+  history: () => ipcRenderer.invoke(IPC.history),
   notifyReady: (error) => ipcRenderer.send(IPC.rendererReady, typeof error === "string" ? error : undefined),
 };
 

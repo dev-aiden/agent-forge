@@ -26,7 +26,13 @@ function devCsp(): Plugin {
 export default defineConfig({
   main: {
     build: {
-      rolldownOptions: { input: { index: resolve(root, "main/index.ts") } },
+      rolldownOptions: {
+        input: {
+          index: resolve(root, "main/index.ts"),
+          // Runs rulesync in an isolated utility process (see packages/adapters/write).
+          "rulesync-worker": resolve(root, "../../packages/adapters/write/rulesync-worker.ts"),
+        },
+      },
     },
   },
   preload: {

@@ -5,6 +5,7 @@ import { IPC, type AppInfo } from "../shared/api";
 import { homedir } from "node:os";
 import { buildOverview, overviewFingerprint, validateProject } from "./overview";
 import { ConfigWatcher, watchedPaths } from "./watch";
+import { registerForgeIpc, smokeCheckWorker } from "./forge";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -137,11 +138,19 @@ ipcMain.handle(IPC.pickProject, async (event) => {
   return result.canceled ? null : (result.filePaths[0] ?? null);
 });
 
+registerForgeIpc(trusted);
+
 ipcMain.on(IPC.rendererReady, (event, error: unknown) => {
   if (!SMOKE || !trusted(event)) return;
   if (typeof error === "string") return smokeFail(`renderer: ${error}`);
-  console.log(`SMOKE_OK ${JSON.stringify(getInfo())}`);
-  app.exit(0);
+  // Also prove the bundled rulesync worker runs from the packaged app.
+  smokeCheckWorker().then(
+    () => {
+      console.log(`SMOKE_OK ${JSON.stringify(getInfo())}`);
+      app.exit(0);
+    },
+    (e: unknown) => smokeFail(`rulesync worker: ${e instanceof Error ? e.message : String(e)}`),
+  );
 });
 
 app.whenReady().then(() => {
