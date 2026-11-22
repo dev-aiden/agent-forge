@@ -134,18 +134,18 @@ export function registerTerminalIpc(
 }
 
 /**
- * Smoke check for packaged builds: proves the native pty module loads and runs.
- * Runs this app's own executable in Node mode to print a marker.
+ * Smoke check for packaged builds: proves the native pty module loads and runs
+ * a console program. (Electron's own executable is a GUI app on Windows, so its
+ * output never reaches the pseudo-console; use the system shell instead.)
  */
 export async function smokeCheckPty(): Promise<void> {
   const pty = await loadPty();
+  const [file, args] =
+    process.platform === "win32"
+      ? [process.env.ComSpec || "cmd.exe", ["/d", "/c", "echo PTY_OK"]]
+      : ["/bin/sh", ["-c", "printf PTY_OK"]];
   await new Promise<void>((resolve, reject) => {
-    const p = pty.spawn(process.execPath, ["-e", "process.stdout.write('PTY_' + 'OK')"], {
-      cols: 80,
-      rows: 24,
-      cwd: homedir(),
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" } as Record<string, string>,
-    });
+    const p = pty.spawn(file, args, { cols: 80, rows: 24, cwd: homedir(), env: process.env as Record<string, string> });
     let out = "";
     const timer = setTimeout(() => {
       p.kill();
@@ -154,8 +154,11 @@ export async function smokeCheckPty(): Promise<void> {
     p.onData((d) => (out += d));
     p.onExit(() => {
       clearTimeout(timer);
-      if (out.includes("PTY_OK")) resolve();
-      else reject(new Error(`pty output missing marker: ${JSON.stringify(out.slice(-200))}`));
+      // ConPTY can report exit before the last output is delivered.
+      setTimeout(() => {
+        if (out.includes("PTY_OK")) resolve();
+        else reject(new Error(`pty output missing marker: ${JSON.stringify(out.slice(-200))}`));
+      }, 500);
     });
   });
 }
