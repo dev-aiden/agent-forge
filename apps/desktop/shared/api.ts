@@ -20,6 +20,25 @@ export interface AppInfo {
   initialProject: string | null;
 }
 
+export type Language = "system" | "en" | "ko";
+
+export interface AppSettings {
+  language: Language;
+  /** Tools hidden everywhere in the app (overview, terminal). */
+  disabledTools: ToolId[];
+}
+
+/** What a terminal tab runs: an official CLI found on PATH, or the user's shell. */
+export type LaunchTarget = ToolId | "shell";
+
+export interface TerminalSession {
+  id: number;
+  target: LaunchTarget;
+  cwd: string;
+  /** The command line that was started (for display). */
+  command: string;
+}
+
 export interface ToolOverview {
   id: ToolId;
   label: string;
@@ -65,6 +84,18 @@ export interface AgentForgeApi {
   undo(applyId: string): Promise<UndoResult>;
   history(): Promise<ApplyManifest[]>;
 
+
+  getSettings(): Promise<AppSettings>;
+  saveSettings(settings: AppSettings): Promise<AppSettings>;
+
+  // Terminal tabs (official CLIs in a pseudo-terminal).
+  termSpawn(target: LaunchTarget, cols: number, rows: number): Promise<TerminalSession>;
+  termWrite(id: number, data: string): void;
+  termResize(id: number, cols: number, rows: number): void;
+  termKill(id: number): void;
+  onTermData(callback: (id: number, data: string) => void): () => void;
+  onTermExit(callback: (id: number, exitCode: number) => void): () => void;
+
   /** Called once the first screen has rendered (used by --smoke-test). Pass an error message on failure. */
   notifyReady(error?: string): void;
 }
@@ -82,4 +113,12 @@ export const IPC = {
   apply: "forge:apply",
   undo: "forge:undo",
   history: "forge:history",
+  getSettings: "settings:get",
+  saveSettings: "settings:save",
+  termSpawn: "term:spawn",
+  termWrite: "term:write",
+  termResize: "term:resize",
+  termKill: "term:kill",
+  termData: "term:data",
+  termExit: "term:exit",
 } as const;

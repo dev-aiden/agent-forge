@@ -3,6 +3,15 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { IPC, type AgentForgeApi } from "../shared/api";
 
+/** Adds a main → renderer listener and returns a function that removes it. */
+function subscribe<A extends unknown[]>(channel: string, fn: (...args: A) => void): () => void {
+  const listener = (_event: unknown, ...args: unknown[]) => fn(...(args as A));
+  ipcRenderer.on(channel, listener);
+  return () => {
+    ipcRenderer.removeListener(channel, listener);
+  };
+}
+
 const api: AgentForgeApi = {
   getInfo: () => ipcRenderer.invoke(IPC.getInfo),
   getOverview: (project) => ipcRenderer.invoke(IPC.getOverview, project),
@@ -21,6 +30,14 @@ const api: AgentForgeApi = {
   apply: (previewId) => ipcRenderer.invoke(IPC.apply, previewId),
   undo: (applyId) => ipcRenderer.invoke(IPC.undo, applyId),
   history: () => ipcRenderer.invoke(IPC.history),
+  getSettings: () => ipcRenderer.invoke(IPC.getSettings),
+  saveSettings: (settings) => ipcRenderer.invoke(IPC.saveSettings, settings),
+  termSpawn: (target, cols, rows) => ipcRenderer.invoke(IPC.termSpawn, target, cols, rows),
+  termWrite: (id, data) => ipcRenderer.send(IPC.termWrite, id, data),
+  termResize: (id, cols, rows) => ipcRenderer.send(IPC.termResize, id, cols, rows),
+  termKill: (id) => ipcRenderer.send(IPC.termKill, id),
+  onTermData: (callback) => subscribe(IPC.termData, (id: number, data: string) => callback(id, data)),
+  onTermExit: (callback) => subscribe(IPC.termExit, (id: number, code: number) => callback(id, code)),
   notifyReady: (error) => ipcRenderer.send(IPC.rendererReady, typeof error === "string" ? error : undefined),
 };
 

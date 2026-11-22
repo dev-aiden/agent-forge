@@ -6,6 +6,9 @@ import { homedir } from "node:os";
 import { buildOverview, overviewFingerprint, validateProject } from "./overview";
 import { ConfigWatcher, watchedPaths } from "./watch";
 import { registerForgeIpc, smokeCheckWorker } from "./forge";
+import { readSettings, writeSettings } from "./settings";
+import { cliEnv } from "./shell-env";
+import { killAllSessions, registerTerminalIpc, smokeCheckPty } from "./terminal";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -35,7 +38,8 @@ let lastFingerprint = "";
 const watcher = new ConfigWatcher(() => {
   const project = watchedProject;
   if (project === undefined || !mainWindow) return;
-  buildOverview(project)
+  cliEnv()
+    .then((env) => buildOverview(project, homedir(), env))
     .then((overview) => {
       if (project !== watchedProject) return; // project switched meanwhile
       const fp = overviewFingerprint(overview);
@@ -117,7 +121,7 @@ ipcMain.handle(IPC.getInfo, (event) => {
 ipcMain.handle(IPC.getOverview, async (event, project: unknown) => {
   if (!trusted(event)) throw new Error("untrusted sender");
   const valid = await validateProject(project);
-  const overview = await buildOverview(valid);
+  const overview = await buildOverview(valid, homedir(), await cliEnv());
   lastFingerprint = overviewFingerprint(overview);
   if (valid !== watchedProject) {
     watchedProject = valid;
@@ -139,17 +143,30 @@ ipcMain.handle(IPC.pickProject, async (event) => {
 });
 
 registerForgeIpc(trusted);
+registerTerminalIpc(trusted, () => watchedProject ?? null);
+
+const settingsCtx = () => ({ home: homedir(), project: "", env: process.env });
+ipcMain.handle(IPC.getSettings, (event) => {
+  if (!trusted(event)) throw new Error("untrusted sender");
+  return readSettings(settingsCtx());
+});
+ipcMain.handle(IPC.saveSettings, (event, settings: unknown) => {
+  if (!trusted(event)) throw new Error("untrusted sender");
+  return writeSettings(settingsCtx(), settings);
+});
 
 ipcMain.on(IPC.rendererReady, (event, error: unknown) => {
   if (!SMOKE || !trusted(event)) return;
   if (typeof error === "string") return smokeFail(`renderer: ${error}`);
-  // Also prove the bundled rulesync worker runs from the packaged app.
-  smokeCheckWorker().then(
+  // Also prove the bundled rulesync worker and the native pty module run from the packaged app.
+  smokeCheckWorker()
+    .then(() => smokeCheckPty())
+    .then(
     () => {
       console.log(`SMOKE_OK ${JSON.stringify(getInfo())}`);
       app.exit(0);
     },
-    (e: unknown) => smokeFail(`rulesync worker: ${e instanceof Error ? e.message : String(e)}`),
+    (e: unknown) => smokeFail(e instanceof Error ? e.message : String(e)),
   );
 });
 
@@ -162,6 +179,7 @@ app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
+  killAllSessions();
   void watcher.close();
 });
 

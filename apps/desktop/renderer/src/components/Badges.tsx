@@ -1,5 +1,6 @@
 import type { Item } from "@agent-forge/model";
 import { SCOPE_STYLE } from "../format";
+import { useT } from "../i18n";
 
 export function Badge({ className, children, title }: { className: string; children: React.ReactNode; title?: string }) {
   return (
@@ -11,21 +12,22 @@ export function Badge({ className, children, title }: { className: string; child
 
 /** Scope plus warnings: unverified location, managed by another app, disabled. */
 export function ItemBadges({ item }: { item: Item }) {
+  const t = useT();
   const managedBy = "extra" in item ? item.extra.managedBy : undefined;
   return (
     <>
-      <Badge className={SCOPE_STYLE[item.source.scope]}>{item.source.scope}</Badge>
+      <Badge className={SCOPE_STYLE[item.source.scope]}>{t(`scope.${item.source.scope}`)}</Badge>
       {!item.source.verified && (
-        <Badge className="border-rose-800 text-rose-300" title="This location is not confirmed by the tool's documentation yet.">
-          unverified path
+        <Badge className="border-rose-800 text-rose-300" title={t("badge.unverifiedTip")}>
+          {t("badge.unverified")}
         </Badge>
       )}
       {typeof managedBy === "string" && (
-        <Badge className="border-violet-800 text-violet-300" title={`Managed by ${managedBy}. Agent Forge will not edit it.`}>
+        <Badge className="border-violet-800 text-violet-300" title={t("badge.managedTip", { by: managedBy })}>
           {managedBy}
         </Badge>
       )}
-      {item.kind === "mcp" && !item.enabled && <Badge className="border-neutral-700 text-neutral-400">disabled</Badge>}
+      {item.kind === "mcp" && !item.enabled && <Badge className="border-neutral-700 text-neutral-400">{t("badge.disabled")}</Badge>}
     </>
   );
 }

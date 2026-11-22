@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import type { Item, ToolConfig } from "@agent-forge/model";
+import { useT } from "../i18n";
 import { ItemBadges } from "./Badges";
 
 const SECTIONS = [
-  { key: "rules", title: "Rules" },
-  { key: "agents", title: "Agents" },
-  { key: "skills", title: "Skills" },
-  { key: "mcpServers", title: "MCP servers" },
+  { key: "rules", title: "section.rules" },
+  { key: "agents", title: "section.agents" },
+  { key: "skills", title: "section.skills" },
+  { key: "mcpServers", title: "section.mcp" },
 ] as const;
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function ItemList({ config, binary, selectedId, onSelect, shortPath }: Props) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
 
@@ -39,7 +41,7 @@ export function ItemList({ config, binary, selectedId, onSelect, shortPath }: Pr
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter by name or description"
+          placeholder={t("list.filter")}
           className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs outline-none placeholder:text-neutral-600 focus:border-neutral-600"
         />
       </div>
@@ -48,11 +50,11 @@ export function ItemList({ config, binary, selectedId, onSelect, shortPath }: Pr
         {sections.map((s) => (
           <section key={s.key} className="border-b border-neutral-900">
             <h2 className="sticky top-0 flex items-center justify-between bg-neutral-950/95 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-              {s.title}
+              {t(s.title)}
               <span>{q ? `${s.shown.length}/${s.total}` : s.total}</span>
             </h2>
             {s.shown.length === 0 ? (
-              <p className="px-3 pb-2 text-xs text-neutral-600">{s.total === 0 ? "None found" : "No match"}</p>
+              <p className="px-3 pb-2 text-xs text-neutral-600">{s.total === 0 ? t("list.none") : t("list.noMatch")}</p>
             ) : (
               <ul>
                 {s.shown.map((item) => (
@@ -78,7 +80,7 @@ export function ItemList({ config, binary, selectedId, onSelect, shortPath }: Pr
 
         {config.issues.length > 0 && (
           <section className="px-3 py-2">
-            <h2 className="mb-1 text-[11px] font-medium uppercase tracking-wide text-amber-500">Problems</h2>
+            <h2 className="mb-1 text-[11px] font-medium uppercase tracking-wide text-amber-500">{t("list.problems")}</h2>
             <ul className="space-y-1">
               {config.issues.map((i, n) => (
                 <li key={n} className="text-xs text-amber-300/80">
@@ -91,7 +93,7 @@ export function ItemList({ config, binary, selectedId, onSelect, shortPath }: Pr
       </div>
 
       <footer className="border-t border-neutral-800 px-3 py-1.5 text-[11px] text-neutral-600">
-        CLI: <span className="font-mono">{binary ? shortPath(binary) : "not found on PATH"}</span>
+        {t("list.cli")}: <span className="font-mono">{binary ? shortPath(binary) : t("list.notOnPath")}</span>
       </footer>
     </aside>
   );

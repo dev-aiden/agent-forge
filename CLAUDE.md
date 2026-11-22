@@ -32,7 +32,10 @@
 - 렌더러는 Node 접근 없이(contextIsolation) preload로 노출한 API만 쓴다.
 
 ## 현재 단계와 다음 작업
-- 지금: 3주차 — 첫 쓰기 기능. 에이전트를 앱에서 만들어 Claude Code·Codex 전역에 적용 (미리보기 → 백업 → 적용 → 되돌리기)
+- 지금: 4주차 — 실행 창(터미널 탭: 감지된 CLI·셸을 node-pty로 실행), 한국어/영어 화면, 설정(언어·도구 켜고 끄기, `~/.agent-forge/settings.json`), 로그인 셸 PATH 가져오기
+  - node-pty: macOS·Windows는 prebuild, Linux는 설치 시 빌드. macOS `spawn-helper` 실행 권한은 루트 `postinstall`(scripts/fix-node-pty.mjs)이 복구
+  - 스모크 테스트가 rulesync 워커와 pty 실행까지 확인
+- 3주차 완료: 에이전트를 앱에서 만들어 Claude Code·Codex 전역에 적용 (미리보기 → 백업 → 적용 → 되돌리기)
   - 쓰기 경로: `packages/adapters/write/` (rulesync는 임시 홈을 가리키는 별도 프로세스에서만 실행, 쓰기 허용 폴더 제한)
   - 다음 후보: 스킬 쓰기 → 규칙·MCP 쓰기(rulesync가 MCP 목록·최상위 규칙을 통째로 교체하므로 기존 내용 가져와 합치기 필요, `~/.claude.json` 쓰기는 원칙 2 관련 결정 필요)
 - 2주차 완료: 공통 데이터 구조(`packages/model`), Claude Code·Codex 읽기 어댑터, 설정 한눈에 보기 화면, 파일 감시 자동 갱신

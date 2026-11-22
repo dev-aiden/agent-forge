@@ -33,4 +33,4 @@ export {
   type UndoResult,
   type WorkerRunner,
 } from "./write/pipeline";
-export { deleteAgent, forgeHome, listAgents, saveAgent } from "./write/store";
+export { deleteAgent, forgeHome, listAgents, saveAgent, writeFileAtomic } from "./write/store";

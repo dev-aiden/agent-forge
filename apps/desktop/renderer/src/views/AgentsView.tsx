@@ -3,6 +3,8 @@ import { WRITABLE_AGENT_TOOLS, type ManagedAgent, type ToolId } from "@agent-for
 import type { ApplyManifest, ChangeSet } from "../../../shared/api";
 import { Badge } from "../components/Badges";
 import { PreviewDialog } from "../components/PreviewDialog";
+import { errorText } from "../format";
+import { useT } from "../i18n";
 
 const TOOL_LABEL: Record<ToolId, string> = {
   claude: "Claude Code",
@@ -37,9 +39,8 @@ function fromDraft(d: Draft): ManagedAgent {
   };
 }
 
-const errorText = (e: unknown) => String(e).replace(/^Error: (Error invoking remote method '[^']+': )?(Error: )?/, "");
-
 export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
+  const t = useT();
   const [agents, setAgents] = useState<ManagedAgent[]>([]);
   const [history, setHistory] = useState<ApplyManifest[]>([]);
   /** null = new agent */
@@ -66,7 +67,7 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
   }, [refresh]);
 
   function select(agent: ManagedAgent | null) {
-    if (dirty && !confirm("Discard unsaved changes?")) return;
+    if (dirty && !confirm(t("agents.discard"))) return;
     const d = agent ? toDraft(agent) : EMPTY;
     setEditing(agent?.name ?? null);
     setDraft(d);
@@ -83,20 +84,20 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
       setEditing(agent.name);
       setDraft(d);
       setSaved(d);
-      setNotice({ text: `Saved "${agent.name}" in Agent Forge. Use "Preview & apply" to write it to your tools.` });
+      setNotice({ text: t("agents.saved", { name: agent.name }) });
     } catch (e) {
       setError(errorText(e));
     }
   }
 
   async function remove() {
-    if (!editing || !confirm(`Delete "${editing}" from Agent Forge? Files already applied are removed on the next apply.`)) return;
+    if (!editing || !confirm(t("agents.confirmDelete", { name: editing }))) return;
     await window.agentForge.deleteAgent(editing);
     await refresh();
     setEditing(null);
     setDraft(EMPTY);
     setSaved(EMPTY);
-    setNotice({ text: `Deleted "${editing}". Apply to remove it from your tools.` });
+    setNotice({ text: t("agents.deleted", { name: editing }) });
   }
 
   async function openPreview() {
@@ -124,8 +125,7 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
       }
       setPreview(null);
       await refresh();
-      const n = result.manifest.entries.length;
-      setNotice({ text: `Applied ${n} file${n === 1 ? "" : "s"}. Originals were backed up.`, undoId: result.manifest.id });
+      setNotice({ text: t("agents.applied", { n: result.manifest.entries.length }), undoId: result.manifest.id });
     } catch (e) {
       setPreviewError(errorText(e));
     } finally {
@@ -139,8 +139,8 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
       await refresh();
       setNotice({
         text:
-          `Restored ${r.restored.length} file${r.restored.length === 1 ? "" : "s"}.` +
-          (r.skipped.length ? ` Kept ${r.skipped.length} file(s) you edited after applying: ${r.skipped.map(shortPath).join(", ")}` : ""),
+          t("agents.restored", { n: r.restored.length }) +
+          (r.skipped.length ? " " + t("agents.keptEdited", { n: r.skipped.length, files: r.skipped.map(shortPath).join(", ") }) : ""),
       });
     } catch (e) {
       setError(errorText(e));
@@ -158,13 +158,13 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
       {/* Left: agents + history */}
       <aside className="flex w-[300px] shrink-0 flex-col border-r border-neutral-800">
         <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">My agents</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{t("agents.title")}</span>
           <button className="btn" onClick={() => select(null)}>
-            New
+            {t("agents.new")}
           </button>
         </div>
         <ul className="min-h-0 flex-1 overflow-y-auto">
-          {agents.length === 0 && <li className="px-3 py-3 text-xs text-neutral-600">No agents yet. Create one on the right.</li>}
+          {agents.length === 0 && <li className="px-3 py-3 text-xs text-neutral-600">{t("agents.empty")}</li>}
           {agents.map((a) => (
             <li key={a.name}>
               <button
@@ -187,19 +187,19 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
 
         <section className="max-h-[40%] overflow-y-auto border-t border-neutral-800">
           <h3 className="sticky top-0 bg-neutral-950 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-            Apply history
+            {t("agents.history")}
           </h3>
-          {recent.length === 0 && <p className="px-3 pb-3 text-xs text-neutral-600">Nothing applied yet.</p>}
+          {recent.length === 0 && <p className="px-3 pb-3 text-xs text-neutral-600">{t("agents.historyEmpty")}</p>}
           <ul>
             {recent.map((h) => (
               <li key={h.id} className="flex items-center gap-2 px-3 py-1.5 text-xs">
                 <span className="text-neutral-400">{new Date(h.createdAt).toLocaleString()}</span>
-                <span className="text-neutral-600">{h.entries.length} files</span>
+                <span className="text-neutral-600">{t("agents.files", { n: h.entries.length })}</span>
                 {h.undoneAt ? (
-                  <span className="ml-auto text-neutral-600">undone</span>
+                  <span className="ml-auto text-neutral-600">{t("agents.undone")}</span>
                 ) : (
                   <button className="ml-auto text-sky-400 hover:underline" onClick={() => undoApply(h.id)}>
-                    Undo
+                    {t("action.undo")}
                   </button>
                 )}
               </li>
@@ -211,15 +211,15 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
       {/* Right: editor */}
       <section className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-3 border-b border-neutral-800 px-5 py-2.5">
-          <h2 className="text-sm font-medium text-neutral-100">{editing ? `Edit "${editing}"` : "New agent"}</h2>
-          <span className="text-xs text-neutral-500">Applies to your global (~) config.</span>
+          <h2 className="text-sm font-medium text-neutral-100">{editing ? t("agents.editTitle", { name: editing }) : t("agents.newTitle")}</h2>
+          <span className="text-xs text-neutral-500">{t("agents.scopeNote")}</span>
           <button
             className="btn-primary ml-auto"
             onClick={openPreview}
             disabled={busy || dirty}
-            title={dirty ? "Save first" : "See exactly what will change before writing"}
+            title={dirty ? t("agents.saveFirst") : t("agents.previewTip")}
           >
-            {busy && !preview ? "Preparing…" : "Preview & apply"}
+            {busy && !preview ? t("agents.preparing") : t("agents.preview")}
           </button>
         </div>
 
@@ -228,11 +228,11 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
             <span>{notice.text}</span>
             {notice.undoId && (
               <button className="text-sky-300 hover:underline" onClick={() => undoApply(notice.undoId!)}>
-                Undo
+                {t("action.undo")}
               </button>
             )}
             <button className="ml-auto text-neutral-500 hover:text-neutral-300" onClick={() => setNotice(null)}>
-              Dismiss
+              {t("action.dismiss")}
             </button>
           </div>
         )}
@@ -245,13 +245,13 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
             void save();
           }}
         >
-          <Field label="Name" hint="Letters, digits, - and _. Used as the file name.">
+          <Field label={t("agents.name")} hint={t("agents.nameHint")}>
             <input className="input font-mono" value={draft.name} onChange={(e) => set("name", e.target.value)} placeholder="code-reviewer" />
           </Field>
-          <Field label="Description" hint="When should the tool use this agent?">
-            <input className="input" value={draft.description} onChange={(e) => set("description", e.target.value)} placeholder="Reviews diffs for bugs and risky changes" />
+          <Field label={t("agents.description")} hint={t("agents.descriptionHint")}>
+            <input className="input" value={draft.description} onChange={(e) => set("description", e.target.value)} placeholder={t("agents.descriptionPlaceholder")} />
           </Field>
-          <Field label="Apply to">
+          <Field label={t("agents.applyTo")}>
             <div className="flex gap-4">
               {WRITABLE_AGENT_TOOLS.map((t) => (
                 <label key={t} className="flex items-center gap-2 text-sm">
@@ -262,31 +262,31 @@ export function AgentsView({ shortPath }: { shortPath(path: string): string }) {
             </div>
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Model" hint="Claude Code only. Empty = inherit.">
+            <Field label={t("agents.model")} hint={t("agents.modelHint")}>
               <input className="input font-mono" value={draft.model} onChange={(e) => set("model", e.target.value)} placeholder="sonnet" />
             </Field>
-            <Field label="Tools" hint="Claude Code only. Comma-separated. Empty = all tools.">
+            <Field label={t("agents.tools")} hint={t("agents.toolsHint")}>
               <input className="input font-mono" value={draft.tools} onChange={(e) => set("tools", e.target.value)} placeholder="Read, Grep, Glob" />
             </Field>
           </div>
-          <Field label="Instructions">
+          <Field label={t("agents.instructions")}>
             <textarea
               className="input min-h-[240px] font-mono text-xs leading-relaxed"
               value={draft.body}
               onChange={(e) => set("body", e.target.value)}
-              placeholder="You are a careful code reviewer…"
+              placeholder={t("agents.instructionsPlaceholder")}
             />
           </Field>
           <div className="flex gap-2">
             <button type="submit" className="btn-primary" disabled={!dirty}>
-              {editing ? "Save changes" : "Create agent"}
+              {editing ? t("agents.save") : t("agents.create")}
             </button>
             {editing && (
               <button type="button" className="btn" onClick={remove}>
-                Delete
+                {t("agents.delete")}
               </button>
             )}
-            {dirty && <span className="self-center text-xs text-amber-400">Unsaved changes</span>}
+            {dirty && <span className="self-center text-xs text-amber-400">{t("agents.unsaved")}</span>}
           </div>
         </form>
       </section>

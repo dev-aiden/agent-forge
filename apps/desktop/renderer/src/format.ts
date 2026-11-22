@@ -1,4 +1,4 @@
-import type { Item, Scope } from "@agent-forge/model";
+import type { Scope } from "@agent-forge/model";
 
 /** Shows paths under the project as `./…` and under home as `~/…`. Works with / and \ separators. */
 export function makeShortPath(home: string, project: string | null) {
@@ -13,15 +13,13 @@ export function makeShortPath(home: string, project: string | null) {
   };
 }
 
-export const KIND_LABEL: Record<Item["kind"], string> = {
-  rule: "Rule",
-  agent: "Agent",
-  skill: "Skill",
-  mcp: "MCP server",
-};
-
 export const SCOPE_STYLE: Record<Scope, string> = {
   global: "border-sky-800 text-sky-300",
   project: "border-emerald-800 text-emerald-300",
   local: "border-amber-800 text-amber-300",
 };
+
+/** Strips Electron's "Error invoking remote method" wrapper from IPC errors. */
+export function errorText(e: unknown): string {
+  return String(e).replace(/^Error: (Error invoking remote method '[^']+': )?(Error: )?/, "");
+}
