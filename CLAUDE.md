@@ -38,7 +38,11 @@
 - 3주차 완료: 에이전트를 앱에서 만들어 Claude Code·Codex 전역에 적용 (미리보기 → 백업 → 적용 → 되돌리기)
   - 쓰기 경로: `packages/adapters/write/` (rulesync는 임시 홈을 가리키는 별도 프로세스에서만 실행, 쓰기 허용 폴더 제한)
   - 스킬 쓰기 완료: `~/.claude/skills/<이름>/`, `~/.agents/skills/<이름>/`(Codex). claude.ai 동기화 폴더(`~/.claude/skills/synced`)는 쓰기 금지, 이름 `synced` 예약
-  - 다음 후보: 규칙·MCP 쓰기(rulesync가 MCP 목록·최상위 규칙을 통째로 교체하므로 기존 내용 가져와 합치기 필요, `~/.claude.json` 쓰기는 원칙 2 관련 결정 필요)
+  - 규칙·MCP 쓰기 완료 (결정: 처음에 기존 설정을 가져와 합침, Claude Code MCP는 `~/.claude.json`을 직접 쓰지 않고 공식 CLI `claude mcp add-json - -s user`/`remove`로 변경)
+    - 전역 규칙: `~/.agent-forge/source/rules/root.md` → `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`
+    - MCP: `~/.agent-forge/source/mcp.jsonc`(0600) → Codex `config.toml`(실제 파일을 스테이징에 복사해 다른 키 보존), Claude는 CLI
+    - 비밀값(env·headers·인자·URL 쿼리)은 렌더러로 보낼 때 가림. 가려진 값을 그대로 저장하면 원래 값 유지
+    - Claude Code 세션 안에서 실행된 앱은 Claude MCP 변경을 막음 (Claude Code가 세션 안 stdin 추가를 거부하므로 우회하지 않음)
 - 2주차 완료: 공통 데이터 구조(`packages/model`), Claude Code·Codex 읽기 어댑터, 설정 한눈에 보기 화면, 파일 감시 자동 갱신
 - 1주차 완료:
   - `npm run scan` — 4개 도구 설정 경로·형식 스캐너 (`packages/adapters/scripts/scan.ts`)

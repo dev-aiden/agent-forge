@@ -111,7 +111,7 @@ export const MASK = "••••";
 
 const SECRET_NAME = /(key|token|secret|password|passwd|auth|credential|bearer|cookie|session)/i;
 
-function maskArgs(args?: string[]): string[] | undefined {
+export function maskArgs(args?: string[]): string[] | undefined {
   if (!args) return undefined;
   return args.map((arg, i) => {
     // --api-key=xxx
@@ -124,7 +124,7 @@ function maskArgs(args?: string[]): string[] | undefined {
   });
 }
 
-function maskUrl(url?: string): string | undefined {
+export function maskUrl(url?: string): string | undefined {
   if (!url) return undefined;
   try {
     const u = new URL(url);
@@ -202,3 +202,30 @@ export interface ManagedSkill {
 export const RESERVED_SKILL_NAMES: readonly string[] = ["synced"];
 
 export type ManagedKind = "agent" | "skill";
+
+/** An MCP server managed by Agent Forge (global scope). */
+export interface ManagedMcpServer {
+  name: string;
+  transport: McpTransport;
+  command?: string;
+  args?: string[];
+  /** Secret values. Never sent to the renderer unmasked. */
+  env?: Record<string, string>;
+  url?: string;
+  /** Secret values. Never sent to the renderer unmasked. */
+  headers?: Record<string, string>;
+  targets: ToolId[];
+}
+
+/** The global top-level instructions (CLAUDE.md / AGENTS.md) managed by Agent Forge. */
+export interface ManagedRule {
+  body: string;
+  targets: ToolId[];
+}
+
+/** Masks a managed MCP server for display (same rules as maskMcpServer). */
+export function maskManagedMcp(server: ManagedMcpServer): ManagedMcpServer {
+  const maskRecord = (r?: Record<string, string>) =>
+    r ? Object.fromEntries(Object.keys(r).map((k) => [k, MASK])) : undefined;
+  return { ...server, args: maskArgs(server.args), env: maskRecord(server.env), headers: maskRecord(server.headers), url: maskUrl(server.url) };
+}

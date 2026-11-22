@@ -29,8 +29,23 @@ export {
   type Change,
   type ChangeAction,
   type ChangeSet,
+  type CommandEntry,
   type ManifestEntry,
+  type PipelineRunners,
   type UndoResult,
+  type Warning,
   type WorkerRunner,
 } from "./write/pipeline";
+export type { ClaudeCliRunner, ClaudeMcpDef, CommandChange } from "./write/claude-mcp";
+export {
+  deleteMcpServer,
+  readManagedMcp,
+  readManagedRule,
+  saveManagedRule,
+  saveMcpServer,
+  unmanageMcp,
+  unmanageRule,
+} from "./write/config-store";
+export { importMcp, importRule, type McpImportResult, type RuleImportResult } from "./write/import";
+export { displayChangeSet } from "./write/display";
 export { deleteAgent, deleteSkill, forgeHome, listAgents, listSkills, saveAgent, saveSkill, writeFileAtomic } from "./write/store";

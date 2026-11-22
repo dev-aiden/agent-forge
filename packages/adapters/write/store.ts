@@ -37,10 +37,10 @@ export function forgePaths(ctx: PathContext) {
 }
 
 /** Writes via a temp file + rename so a crash never leaves a half-written file. */
-export async function writeFileAtomic(path: string, content: string | Buffer): Promise<void> {
+export async function writeFileAtomic(path: string, content: string | Buffer, mode?: number): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   const tmp = `${path}.agent-forge-${process.pid}-${Date.now()}.tmp`;
-  await writeFile(tmp, content);
+  await writeFile(tmp, content, mode === undefined ? undefined : { mode });
   try {
     await rename(tmp, path);
   } catch (e) {

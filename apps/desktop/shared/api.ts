@@ -1,11 +1,20 @@
 // Types shared by main, preload and renderer. Keep this file free of runtime imports.
-import type { ApplyManifest, ChangeSet, UndoResult } from "@agent-forge/adapters";
-import type { ManagedAgent, ManagedSkill, ToolConfig, ToolId } from "@agent-forge/model";
+import type { ChangeSet, McpImportResult, RuleImportResult, UndoResult } from "@agent-forge/adapters";
+import type { ManagedAgent, ManagedMcpServer, ManagedRule, ManagedSkill, ToolConfig, ToolId } from "@agent-forge/model";
 
-export type { ApplyManifest, Change, ChangeSet, UndoResult } from "@agent-forge/adapters";
+export type { Change, ChangeSet, CommandChange, ClaudeMcpDef, McpImportResult, RuleImportResult, UndoResult, Warning } from "@agent-forge/adapters";
+
+/** What the renderer sees of an apply (manifests hold secrets and stay in the main process). */
+export interface ApplySummary {
+  id: string;
+  createdAt: string;
+  undoneAt?: string;
+  fileCount: number;
+  commandCount: number;
+}
 
 export type ApplyResult =
-  | { ok: true; manifest: ApplyManifest }
+  | { ok: true; manifest: ApplySummary }
   | { ok: false; error: string; conflicts?: string[] };
 
 export interface AppInfo {
@@ -80,12 +89,29 @@ export interface AgentForgeApi {
   listSkills(): Promise<ManagedSkill[]>;
   saveSkill(skill: ManagedSkill, previousName?: string): Promise<ManagedSkill>;
   deleteSkill(name: string): Promise<void>;
-  /** Computes changes without touching tool config. */
+  /** Global rule managed by Agent Forge, or null if not managed. */
+  getRule(): Promise<ManagedRule | null>;
+  saveRule(rule: ManagedRule): Promise<ManagedRule>;
+  /** Starts managing the global rule with the current CLAUDE.md / AGENTS.md. */
+  importRule(): Promise<RuleImportResult>;
+  /** Stops managing the global rule (tool files are left as they are). */
+  unmanageRule(): Promise<void>;
+
+  /** Managed MCP servers with secret values masked, or null if MCP is not managed. */
+  listMcp(): Promise<ManagedMcpServer[] | null>;
+  /** Masked values sent back unchanged keep the stored secret. */
+  saveMcp(server: ManagedMcpServer, previousName?: string): Promise<ManagedMcpServer>;
+  deleteMcp(name: string): Promise<void>;
+  /** Adds servers configured in Claude Code / Codex that are not managed yet. */
+  importMcp(): Promise<McpImportResult>;
+  unmanageMcp(): Promise<void>;
+
+  /** Computes changes without touching tool config. Secrets are masked. */
   previewApply(): Promise<ChangeSet>;
   /** Applies a preview made by the main process (by id only). */
   apply(previewId: string): Promise<ApplyResult>;
   undo(applyId: string): Promise<UndoResult>;
-  history(): Promise<ApplyManifest[]>;
+  history(): Promise<ApplySummary[]>;
 
 
   getSettings(): Promise<AppSettings>;
@@ -115,6 +141,15 @@ export const IPC = {
   listSkills: "forge:list-skills",
   saveSkill: "forge:save-skill",
   deleteSkill: "forge:delete-skill",
+  getRule: "forge:get-rule",
+  saveRule: "forge:save-rule",
+  importRule: "forge:import-rule",
+  unmanageRule: "forge:unmanage-rule",
+  listMcp: "forge:list-mcp",
+  saveMcp: "forge:save-mcp",
+  deleteMcp: "forge:delete-mcp",
+  importMcp: "forge:import-mcp",
+  unmanageMcp: "forge:unmanage-mcp",
   previewApply: "forge:preview",
   apply: "forge:apply",
   undo: "forge:undo",

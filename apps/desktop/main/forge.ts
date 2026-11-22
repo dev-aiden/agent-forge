@@ -1,33 +1,50 @@
-// IPC for app-managed agents: store, preview, apply, undo, history.
+// IPC for app-managed items (agents, skills, global rule, MCP servers):
+// store, import, preview, apply, undo, history.
 //
 // The renderer never sends paths or file contents to write. It asks for a
-// preview, gets back an id, and can only apply a preview the main process made.
+// preview, gets back a masked copy with an id, and can only apply a preview
+// the main process made. Secrets in MCP config never reach the renderer.
 import { utilityProcess, type IpcMainInvokeEvent, ipcMain } from "electron";
+import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ManagedAgent, ManagedSkill } from "@agent-forge/model";
+import { maskManagedMcp, type ManagedAgent, type ManagedMcpServer, type ManagedRule, type ManagedSkill } from "@agent-forge/model";
 import {
   apply,
   ConflictError,
   deleteAgent,
+  deleteMcpServer,
   deleteSkill,
+  displayChangeSet,
   history,
+  importMcp,
+  importRule,
   listAgents,
   listSkills,
   preview,
+  readManagedMcp,
+  readManagedRule,
   saveAgent,
+  saveManagedRule,
+  saveMcpServer,
   saveSkill,
   undo,
+  unmanageMcp,
+  unmanageRule,
   type ChangeSet,
+  type ClaudeCliRunner,
   type PathContext,
+  type PipelineRunners,
   type WorkerRunner,
 } from "@agent-forge/adapters";
 import { IPC, type ApplyResult } from "../shared/api";
+import { cliEnv, findCli } from "./shell-env";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const WORKER = join(here, "rulesync-worker.js");
 const PREVIEW_TTL_MS = 10 * 60_000;
+const CLI_TIMEOUT_MS = 60_000;
 
 /** Runs rulesync in an Electron utility process (a separate Node process). */
 const utilityRunner: WorkerRunner = ({ env, cwd }) =>
@@ -40,12 +57,58 @@ const utilityRunner: WorkerRunner = ({ env, cwd }) =>
     );
   });
 
+/** Runs the official Claude Code CLI found on PATH, or null if it is not installed. */
+async function claudeRunner(): Promise<ClaudeCliRunner | null> {
+  const binary = await findCli("claude");
+  if (!binary) return null;
+  const env = await cliEnv();
+  return (args, stdin) =>
+    new Promise((resolve, reject) => {
+      const child = spawn(binary, args, {
+        env,
+        cwd: homedir(),
+        stdio: ["pipe", "ignore", "pipe"],
+        // npm installs a .cmd shim on Windows.
+        shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(binary),
+        windowsHide: true,
+      });
+      let stderr = "";
+      const timer = setTimeout(() => {
+        child.kill();
+        reject(new Error(`claude ${args.slice(0, 2).join(" ")} timed out`));
+      }, CLI_TIMEOUT_MS);
+      child.stderr.on("data", (d) => (stderr += d));
+      child.on("error", (e) => {
+        clearTimeout(timer);
+        reject(e);
+      });
+      child.on("exit", (code) => {
+        clearTimeout(timer);
+        if (code === 0) resolve();
+        // Command name only: stdin may hold secrets and is never echoed.
+        else reject(new Error(`claude ${args.slice(0, 3).join(" ")} failed (exit ${code}): ${stderr.trim().slice(-300)}`));
+      });
+      child.stdin.end(stdin ?? "");
+    });
+}
+
+async function runners(): Promise<PipelineRunners> {
+  // Claude Code refuses `mcp add-json -` (stdin) when run from inside a Claude Code
+  // session, because its own permission prompt could not be shown. Respect that:
+  // do not try, and tell the user to launch Agent Forge normally.
+  if (process.env.CLAUDECODE) return { worker: utilityRunner, claude: null, claudeUnavailable: "inside-session" };
+  const claude = await claudeRunner();
+  return { worker: utilityRunner, claude, claudeUnavailable: claude ? undefined : "not-found" };
+}
+
 function ctx(): PathContext {
   // Global scope only for now: no project.
   return { home: homedir(), project: "", env: process.env };
 }
 
-/** Previews made by the main process, by id. Apply only accepts these. */
+const isCodexConfig = (path: string) => path === join(homedir(), ".codex", "config.toml");
+
+/** Previews made by the main process, by id (unmasked). Apply only accepts these. */
 const previews = new Map<string, { set: ChangeSet; at: number }>();
 
 export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean): void {
@@ -56,23 +119,36 @@ export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean
     });
 
   handle(IPC.listAgents, () => listAgents(ctx()));
-
   handle(IPC.saveAgent, (agent: ManagedAgent, previousName?: string) => saveAgent(ctx(), agent, previousName));
-
   handle(IPC.deleteAgent, (name: string) => deleteAgent(ctx(), name));
 
   handle(IPC.listSkills, () => listSkills(ctx()));
-
   handle(IPC.saveSkill, (skill: ManagedSkill, previousName?: string) => saveSkill(ctx(), skill, previousName));
-
   handle(IPC.deleteSkill, (name: string) => deleteSkill(ctx(), name));
 
+  handle(IPC.getRule, () => readManagedRule(ctx()));
+  handle(IPC.saveRule, (rule: ManagedRule) => saveManagedRule(ctx(), rule));
+  handle(IPC.importRule, () => importRule(ctx()));
+  handle(IPC.unmanageRule, () => unmanageRule(ctx()));
+
+  // MCP values are masked on the way out; saveMcpServer restores masked values on the way in.
+  handle(IPC.listMcp, async () => {
+    const list = await readManagedMcp(ctx());
+    return list === null ? null : list.map(maskManagedMcp);
+  });
+  handle(IPC.saveMcp, async (server: ManagedMcpServer, previousName?: string) =>
+    maskManagedMcp(await saveMcpServer(ctx(), server, previousName)),
+  );
+  handle(IPC.deleteMcp, (name: string) => deleteMcpServer(ctx(), name));
+  handle(IPC.importMcp, () => importMcp(ctx()));
+  handle(IPC.unmanageMcp, () => unmanageMcp(ctx()));
+
   handle(IPC.previewApply, async () => {
-    const set = await preview(ctx(), utilityRunner);
+    const set = await preview(ctx(), await runners());
     const now = Date.now();
     for (const [id, p] of previews) if (now - p.at > PREVIEW_TTL_MS) previews.delete(id);
     previews.set(set.id, { set, at: now });
-    return set;
+    return displayChangeSet(set, isCodexConfig);
   });
 
   handle(IPC.apply, async (id: string): Promise<ApplyResult> => {
@@ -80,16 +156,27 @@ export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean
     if (!entry) return { ok: false, error: "This preview expired. Preview again." };
     previews.delete(id);
     try {
-      return { ok: true, manifest: await apply(ctx(), entry.set) };
+      return { ok: true, manifest: summary(await apply(ctx(), entry.set, await runners())) };
     } catch (e) {
       if (e instanceof ConflictError) return { ok: false, error: e.message, conflicts: e.paths };
-      throw e;
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   });
 
-  handle(IPC.undo, (id: string) => undo(ctx(), id));
+  handle(IPC.undo, async (id: string) => undo(ctx(), id, await runners()));
 
-  handle(IPC.history, () => history(ctx()));
+  handle(IPC.history, async () => (await history(ctx())).map(summary));
+}
+
+/** Manifests hold MCP definitions (with secrets): only send what the UI needs. */
+function summary(m: import("@agent-forge/adapters").ApplyManifest) {
+  return {
+    id: m.id,
+    createdAt: m.createdAt,
+    undoneAt: m.undoneAt,
+    fileCount: m.entries.length,
+    commandCount: m.commands?.length ?? 0,
+  };
 }
 
 /**
@@ -104,7 +191,7 @@ export async function smokeCheckWorker(): Promise<void> {
     const home = join(root, "home");
     const smokeCtx: PathContext = { home, project: "", env: { AGENT_FORGE_HOME: join(root, "forge") } };
     await saveAgent(smokeCtx, { name: "smoke", description: "Smoke test", body: "Hi", targets: ["claude", "codex"] });
-    const set = await preview(smokeCtx, utilityRunner);
+    const set = await preview(smokeCtx, { worker: utilityRunner, claude: null });
     const creates = set.changes.filter((c) => c.action === "create").length;
     if (creates !== 2) throw new Error(`expected 2 planned files, got ${creates}`);
   } finally {

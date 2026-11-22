@@ -8,6 +8,9 @@ import { dirname, join } from "node:path";
 import type { ManagedAgent } from "@agent-forge/model";
 import type { PathContext } from "../types";
 import { nodeWorkerRunner } from "./node-runner";
+import type { PipelineRunners } from "./pipeline";
+
+const runners: PipelineRunners = { worker: nodeWorkerRunner, claude: null };
 import { apply, assertWritable, ConflictError, history, preview, undo } from "./pipeline";
 import { deleteAgent, deleteSkill, listAgents, listSkills, saveAgent, saveSkill } from "./store";
 
@@ -68,7 +71,7 @@ test("preview writes nothing to the tool config", async () => {
   await saveAgent(ctx, reviewer);
   const before = await snapshot(join(toolHome(), ".claude"));
   const beforeCodex = await snapshot(join(toolHome(), ".codex"));
-  const set = await preview(ctx, nodeWorkerRunner);
+  const set = await preview(ctx, runners);
   assert.deepEqual(
     set.changes.map((c) => [c.path, c.action]),
     [
@@ -84,60 +87,60 @@ test("preview writes nothing to the tool config", async () => {
 
 test("apply writes files, backs up, and undo restores", async () => {
   await saveAgent(ctx, reviewer);
-  const applied = await apply(ctx, await preview(ctx, nodeWorkerRunner));
+  const applied = await apply(ctx, await preview(ctx, runners), runners);
   assert.equal(applied.entries.length, 2);
   assert.ok(await exists(join(claudeAgents, "forge-reviewer.md")));
   assert.ok(await exists(join(codexAgents, "forge-reviewer.toml")));
 
   // Nothing left to do.
-  const again = await preview(ctx, nodeWorkerRunner);
+  const again = await preview(ctx, runners);
   assert.ok(again.changes.every((c) => c.action === "unchanged"));
 
   // Edit → modify; undo restores the first version.
   const v1 = await readFile(join(claudeAgents, "forge-reviewer.md"), "utf8");
   await saveAgent(ctx, { ...reviewer, description: "Reviews diffs v2" }, reviewer.name);
-  const edit = await preview(ctx, nodeWorkerRunner);
+  const edit = await preview(ctx, runners);
   assert.deepEqual(edit.changes.map((c) => c.action), ["modify", "modify"]);
   assert.ok(edit.changes.every((c) => !c.unmanagedOverwrite));
-  const m2 = await apply(ctx, edit);
+  const m2 = await apply(ctx, edit, runners);
   assert.match(await readFile(join(claudeAgents, "forge-reviewer.md"), "utf8"), /v2/);
-  const r = await undo(ctx, m2.id);
+  const r = await undo(ctx, m2.id, runners);
   assert.equal(r.restored.length, 2);
   assert.equal(await readFile(join(claudeAgents, "forge-reviewer.md"), "utf8"), v1);
 
   // Undo the first apply → files gone, user's own agent untouched.
-  await undo(ctx, applied.id);
+  await undo(ctx, applied.id, runners);
   assert.ok(!(await exists(join(claudeAgents, "forge-reviewer.md"))));
   assert.ok(!(await exists(join(codexAgents, "forge-reviewer.toml"))));
   assert.equal(await readFile(join(claudeAgents, "mine.md"), "utf8"), "---\nname: mine\n---\nMine.\n");
   assert.equal((await history(ctx)).filter((h) => h.undoneAt).length, 2);
-  await assert.rejects(undo(ctx, applied.id), /already undone/);
+  await assert.rejects(undo(ctx, applied.id, runners), /already undone/);
 });
 
 test("deleting an agent removes the files it created", async () => {
   await saveAgent(ctx, reviewer);
-  await apply(ctx, await preview(ctx, nodeWorkerRunner));
+  await apply(ctx, await preview(ctx, runners), runners);
   await deleteAgent(ctx, reviewer.name);
-  const set = await preview(ctx, nodeWorkerRunner);
+  const set = await preview(ctx, runners);
   assert.deepEqual(set.changes.map((c) => c.action), ["delete", "delete"]);
-  const m = await apply(ctx, set);
+  const m = await apply(ctx, set, runners);
   assert.ok(!(await exists(join(claudeAgents, "forge-reviewer.md"))));
-  await undo(ctx, m.id);
+  await undo(ctx, m.id, runners);
   assert.ok(await exists(join(claudeAgents, "forge-reviewer.md")));
 });
 
 test("refuses to apply when a file changed after the preview", async () => {
   await saveAgent(ctx, reviewer);
-  const set = await preview(ctx, nodeWorkerRunner);
+  const set = await preview(ctx, runners);
   await put(join(claudeAgents, "forge-reviewer.md"), "user wrote this meanwhile\n");
-  await assert.rejects(apply(ctx, set), ConflictError);
+  await assert.rejects(apply(ctx, set, runners), ConflictError);
   assert.equal(await readFile(join(claudeAgents, "forge-reviewer.md"), "utf8"), "user wrote this meanwhile\n");
 });
 
 test("flags overwriting a file Agent Forge did not create", async () => {
   await put(join(claudeAgents, "forge-reviewer.md"), "---\nname: forge-reviewer\n---\nUser's own.\n");
   await saveAgent(ctx, reviewer);
-  const set = await preview(ctx, nodeWorkerRunner);
+  const set = await preview(ctx, runners);
   const c = set.changes.find((x) => x.path.endsWith("forge-reviewer.md"))!;
   assert.equal(c.action, "modify");
   assert.equal(c.unmanagedOverwrite, true);
@@ -145,9 +148,9 @@ test("flags overwriting a file Agent Forge did not create", async () => {
 
 test("undo keeps files the user edited after the apply", async () => {
   await saveAgent(ctx, reviewer);
-  const m = await apply(ctx, await preview(ctx, nodeWorkerRunner));
+  const m = await apply(ctx, await preview(ctx, runners), runners);
   await put(join(claudeAgents, "forge-reviewer.md"), "edited by user\n");
-  const r = await undo(ctx, m.id);
+  const r = await undo(ctx, m.id, runners);
   assert.deepEqual(r.skipped, [join(claudeAgents, "forge-reviewer.md")]);
   assert.equal(await readFile(join(claudeAgents, "forge-reviewer.md"), "utf8"), "edited by user\n");
   assert.ok(!(await exists(join(codexAgents, "forge-reviewer.toml"))));
@@ -163,8 +166,8 @@ test("never writes outside agent folders or to credential files", () => {
 
 test("credential and account files are untouched after a full cycle", async () => {
   await saveAgent(ctx, reviewer);
-  const m = await apply(ctx, await preview(ctx, nodeWorkerRunner));
-  await undo(ctx, m.id);
+  const m = await apply(ctx, await preview(ctx, runners), runners);
+  await undo(ctx, m.id, runners);
   assert.equal(await readFile(join(toolHome(), ".codex", "auth.json"), "utf8"), '{"OPENAI_API_KEY":"x"}');
   assert.equal(await readFile(join(toolHome(), ".claude.json"), "utf8"), '{"oauthAccount":{}}');
 });
@@ -186,7 +189,7 @@ test("skills: store round-trip and reserved names", async () => {
 test("skills: apply creates SKILL.md for Claude and Codex, delete removes the folders", async () => {
   await put(join(toolHome(), ".claude", "skills", "my-own", "SKILL.md"), "---\nname: my-own\n---\nmine\n");
   await saveSkill(ctx, lint);
-  const set = await preview(ctx, nodeWorkerRunner);
+  const set = await preview(ctx, runners);
   assert.deepEqual(
     set.changes.map((c) => [c.path, c.action]),
     [
@@ -194,25 +197,25 @@ test("skills: apply creates SKILL.md for Claude and Codex, delete removes the fo
       [claudeSkill(), "create"],
     ].sort((a, b) => a[0].localeCompare(b[0])),
   );
-  await apply(ctx, set);
+  await apply(ctx, set, runners);
   assert.match(await readFile(claudeSkill(), "utf8"), /Run the linter/);
   assert.ok(await exists(codexSkill()));
 
   await deleteSkill(ctx, lint.name);
-  const del = await apply(ctx, await preview(ctx, nodeWorkerRunner));
+  const del = await apply(ctx, await preview(ctx, runners), runners);
   assert.equal(del.entries.length, 2);
   assert.ok(!(await exists(dirname(claudeSkill()))), "empty skill folder should be removed");
   assert.ok(!(await exists(dirname(codexSkill()))));
   assert.ok(await exists(join(toolHome(), ".claude", "skills", "my-own", "SKILL.md")), "user's own skill must stay");
 
-  await undo(ctx, del.id);
+  await undo(ctx, del.id, runners);
   assert.ok(await exists(claudeSkill()));
 });
 
 test("skills: undo of a create removes the skill folder", async () => {
   await saveSkill(ctx, lint);
-  const m = await apply(ctx, await preview(ctx, nodeWorkerRunner));
-  await undo(ctx, m.id);
+  const m = await apply(ctx, await preview(ctx, runners), runners);
+  await undo(ctx, m.id, runners);
   assert.ok(!(await exists(dirname(claudeSkill()))));
   assert.ok(await exists(join(toolHome(), ".claude")), "tool folder itself stays");
 });

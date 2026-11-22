@@ -84,3 +84,11 @@ export async function cliEnv(): Promise<Record<string, string>> {
   env.PATH = await resolvedPath();
   return env;
 }
+
+/** Finds a CLI on the resolved PATH (never executes it). */
+export async function findCli(tool: import("@agent-forge/model").ToolId): Promise<string | null> {
+  const { scan } = await import("@agent-forge/adapters");
+  const { homedir } = await import("node:os");
+  const result = await scan({ home: homedir(), project: "", env: { PATH: await resolvedPath(), PATHEXT: process.env.PATHEXT } });
+  return result.tools.find((t) => t.id === tool)?.binary ?? null;
+}

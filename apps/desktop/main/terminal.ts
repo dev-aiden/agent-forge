@@ -7,11 +7,10 @@
 import { ipcMain, type IpcMainInvokeEvent, type WebContents } from "electron";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { scan } from "@agent-forge/adapters";
 import { TOOL_IDS, type ToolId } from "@agent-forge/model";
 import type { IPty } from "node-pty";
 import { IPC, type LaunchTarget, type TerminalSession } from "../shared/api";
-import { cliEnv, resolvedPath } from "./shell-env";
+import { cliEnv, findCli } from "./shell-env";
 
 // Loaded lazily so a broken native module cannot prevent the app from starting.
 type NodePty = typeof import("node-pty");
@@ -41,9 +40,7 @@ function defaultShell(): { file: string; args: string[] } {
 async function commandFor(target: LaunchTarget): Promise<{ file: string; args: string[] }> {
   if (target === "shell") return defaultShell();
   if (!TOOL_IDS.includes(target)) throw new Error("unknown tool");
-  const path = await resolvedPath();
-  const result = await scan({ home: homedir(), project: "", env: { PATH: path, PATHEXT: process.env.PATHEXT } });
-  const binary = result.tools.find((t) => t.id === target)?.binary;
+  const binary = await findCli(target);
   if (!binary) throw new Error(`${target} CLI was not found on PATH`);
   // npm installs .cmd shims on Windows; ConPTY needs a real executable.
   if (process.platform === "win32" && /\.(cmd|bat)$/i.test(binary)) {

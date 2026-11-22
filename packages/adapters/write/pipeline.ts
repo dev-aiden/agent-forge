@@ -2,14 +2,17 @@
 //
 // 1. preview: rulesync generates into a throw-away staging home (separate process).
 //    Staged files are compared with the real ones. Nothing real is touched.
-// 2. apply:   re-checks that real files did not change since the preview, backs up
-//    originals to ~/.agent-forge/backups/<id>/, then writes atomically.
-// 3. undo:    restores the backup. Files edited by the user after the apply are kept.
+//    Shared files rulesync merges into (Codex config.toml) are copied into the
+//    staging home first, so keys Agent Forge does not manage are preserved.
+// 2. apply:   re-checks that nothing changed since the preview, backs up originals
+//    to ~/.agent-forge/backups/<id>/, writes files atomically, then runs the
+//    planned Claude Code CLI commands for MCP servers.
+// 3. undo:    restores the backup / runs the reverse commands. Anything the user
+//    changed after the apply is kept.
 //
-// All writes to tool config go through `writeChange` / `restoreChange`, and every
-// path is checked against `writableRoots` first.
+// Every file path is checked by `assertWritable` before it is written.
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, rmdir, unlink } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, rmdir, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { RULESYNC_TARGET, WRITABLE_AGENT_TOOLS } from "@agent-forge/model";
@@ -17,6 +20,16 @@ import { claudePaths } from "../claude/paths";
 import { codexPaths } from "../codex/paths";
 import { isSensitive } from "../shared/read-utils";
 import type { PathContext } from "../types";
+import {
+  currentClaudeServers,
+  planClaudeMcp,
+  runClaudeChange,
+  sameDef,
+  type ClaudeCliRunner,
+  type ClaudeMcpDef,
+  type CommandChange,
+} from "./claude-mcp";
+import { readManagedMcp, readManagedRule } from "./config-store";
 import {
   ensureForgeDirs,
   forgePaths,
@@ -31,6 +44,16 @@ import {
 /** Starts the rulesync worker with the given env and cwd; resolves when it exits with code 0. */
 export type WorkerRunner = (job: { env: Record<string, string>; cwd: string }) => Promise<void>;
 
+export type ClaudeUnavailable = "not-found" | "inside-session";
+
+export interface PipelineRunners {
+  worker: WorkerRunner;
+  /** Runs the Claude Code CLI. Null when it cannot be used (see claudeUnavailable). */
+  claude: ClaudeCliRunner | null;
+  /** Why `claude` is null. Default: "not-found". */
+  claudeUnavailable?: ClaudeUnavailable;
+}
+
 export type ChangeAction = "create" | "modify" | "delete" | "unchanged";
 
 export interface Change {
@@ -41,14 +64,28 @@ export interface Change {
   after: string | null;
   /** sha256 of `before` (null = file did not exist). Checked again at apply time. */
   beforeHash: string | null;
-  /** The file exists but was not written by Agent Forge. */
+  /** The file exists but was not written by Agent Forge (it will be replaced). */
   unmanagedOverwrite: boolean;
+  /** Only part of a shared file changes; other settings in it are kept. */
+  merged: boolean;
+}
+
+export interface Warning {
+  kind: "unmanaged-mcp";
+  tool: "claude" | "codex";
+  /** MCP servers configured in the tool but not in Agent Forge: applying removes them. */
+  names: string[];
 }
 
 export interface ChangeSet {
   id: string;
   createdAt: string;
   changes: Change[];
+  /** Claude Code CLI commands (MCP servers). */
+  commands: CommandChange[];
+  warnings: Warning[];
+  /** Set when commands are planned but the Claude Code CLI cannot be used. */
+  blocked?: ClaudeUnavailable;
 }
 
 export interface ManifestEntry {
@@ -62,16 +99,24 @@ export interface ManifestEntry {
   previouslyManaged: string | null;
 }
 
+export interface CommandEntry {
+  tool: "claude";
+  name: string;
+  before: ClaudeMcpDef | null;
+  after: ClaudeMcpDef | null;
+}
+
 export interface ApplyManifest {
   id: string;
   createdAt: string;
   entries: ManifestEntry[];
+  commands?: CommandEntry[];
   undoneAt?: string;
 }
 
 export class ConflictError extends Error {
   constructor(readonly paths: string[]) {
-    super(`Files changed since the preview: ${paths.join(", ")}. Preview again.`);
+    super(`Changed since the preview: ${paths.join(", ")}. Preview again.`);
   }
 }
 
@@ -91,11 +136,18 @@ function inside(child: string, parent: string): boolean {
   return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }
 
-/** Directories Agent Forge may write into. Everything else is refused. */
+/** Folders holding one file per app-managed item. Files here may be created and deleted. */
 export function writableRoots(ctx: PathContext): string[] {
   const claude = claudePaths(ctx).global;
   const codex = codexPaths(ctx).global;
   return [claude.agentsDir, claude.skillsDir, codex.agentsDir, codex.skillsDir];
+}
+
+/** Individual shared files Agent Forge may update (never delete). */
+export function writableFiles(ctx: PathContext): string[] {
+  const claude = claudePaths(ctx).global;
+  const codex = codexPaths(ctx).global;
+  return [claude.rulesFile, codex.rulesFile, codex.config];
 }
 
 /** Folders inside writable roots that belong to someone else (e.g. claude.ai synced skills). */
@@ -107,9 +159,14 @@ export function assertWritable(ctx: PathContext, path: string): void {
   const abs = resolve(path);
   if (abs !== path) throw new Error(`refusing non-normalized path: ${path}`);
   if (isSensitive(abs)) throw new Error(`refusing to write credential file: ${abs}`);
-  if (!writableRoots(ctx).some((root) => inside(abs, root))) throw new Error(`refusing to write outside tool config folders: ${abs}`);
-  if (protectedDirs(ctx).some((dir) => abs === dir || inside(abs, dir))) throw new Error(`refusing to write into a folder managed by another app: ${abs}`);
+  const ok = writableFiles(ctx).includes(abs) || writableRoots(ctx).some((root) => inside(abs, root));
+  if (!ok) throw new Error(`refusing to write outside tool config folders: ${abs}`);
+  if (protectedDirs(ctx).some((dir) => abs === dir || inside(abs, dir))) {
+    throw new Error(`refusing to write into a folder managed by another app: ${abs}`);
+  }
 }
+
+const isItemFile = (ctx: PathContext, path: string) => writableRoots(ctx).some((root) => inside(path, root));
 
 /**
  * After removing a file, removes its now-empty parent folders up to (not
@@ -131,11 +188,23 @@ async function removeEmptyParents(ctx: PathContext, file: string): Promise<void>
 // ---------------------------------------------------------------------------
 // preview
 
-export async function preview(ctx: PathContext, runWorker: WorkerRunner): Promise<ChangeSet> {
+export async function preview(ctx: PathContext, runners: PipelineRunners): Promise<ChangeSet> {
   await ensureForgeDirs(ctx);
   const forge = forgePaths(ctx);
-  const itemCount = (await listAgents(ctx)).length + (await listSkills(ctx)).length;
+  const codex = codexPaths(ctx).global;
   const state = await readState(ctx);
+  const [agents, skills, rule, mcp] = await Promise.all([
+    listAgents(ctx),
+    listSkills(ctx),
+    readManagedRule(ctx),
+    readManagedMcp(ctx),
+  ]);
+
+  const features: string[] = [];
+  if (agents.length) features.push("subagents");
+  if (skills.length) features.push("skills");
+  if (rule) features.push("rules");
+  if (mcp) features.push("mcp");
 
   // Generate into a staging home that rulesync treats as "~".
   const stagingRoot = await mkdtemp(join(tmpdir(), "agent-forge-stage-"));
@@ -146,16 +215,22 @@ export async function preview(ctx: PathContext, runWorker: WorkerRunner): Promis
     await mkdir(work);
 
     let outputs: string[] = [];
-    if (itemCount > 0) {
+    if (features.length > 0) {
+      // rulesync merges MCP into config.toml: give it the real file so other keys survive.
+      if (mcp && (await readOrNull(codex.config)) !== null) {
+        const staged = resolve(stagingHome, relative(ctx.home, codex.config));
+        await mkdir(dirname(staged), { recursive: true });
+        await copyFile(codex.config, staged);
+      }
       const resultPath = join(stagingRoot, "result.json");
       const job = {
         stagingRoot,
         stagingHome,
         inputRoot: forge.source,
         targets: WRITABLE_AGENT_TOOLS.map((t) => RULESYNC_TARGET[t]),
-        features: ["subagents", "skills"],
+        features,
       };
-      await runWorker({
+      await runners.worker({
         cwd: work,
         env: {
           AGENT_FORGE_JOB: JSON.stringify(job),
@@ -170,6 +245,7 @@ export async function preview(ctx: PathContext, runWorker: WorkerRunner): Promis
       outputs = (JSON.parse(await readFile(resultPath, "utf8")) as { outputs: string[] }).outputs;
     }
 
+    const claudeUserJson = claudePaths(ctx).global.userJson;
     const changes: Change[] = [];
     const produced = new Set<string>();
 
@@ -177,34 +253,66 @@ export async function preview(ctx: PathContext, runWorker: WorkerRunner): Promis
       const staged = resolve(stagingHome, rel);
       if (!inside(staged, stagingHome)) throw new Error(`rulesync produced a path outside the staging home: ${rel}`);
       const path = resolve(ctx.home, rel);
+      // Claude Code MCP is applied through its CLI, never by writing ~/.claude.json.
+      if (path === claudeUserJson) continue;
       assertWritable(ctx, path);
       produced.add(path);
 
       const after = await readFile(staged, "utf8");
       const before = await readOrNull(path);
+      if (before === null && after.trim() === "") continue; // nothing worth creating
       const beforeHash = before === null ? null : sha256(before);
+      const merged = path === codex.config;
       changes.push({
         path,
         action: before === null ? "create" : before === after ? "unchanged" : "modify",
         before,
         after,
         beforeHash,
-        unmanagedOverwrite: before !== null && before !== after && state.managed[path] !== beforeHash,
+        unmanagedOverwrite: !merged && before !== null && before !== after && state.managed[path] !== beforeHash,
+        merged,
       });
     }
 
-    // Files Agent Forge wrote earlier that are no longer produced → remove them,
-    // unless the user edited them since (then leave them alone).
+    // Item files Agent Forge wrote earlier that are no longer produced → remove them,
+    // unless the user edited them since. Shared files are never deleted.
     for (const [path, hash] of Object.entries(state.managed)) {
-      if (produced.has(path)) continue;
+      if (produced.has(path) || !isItemFile(ctx, path)) continue;
       assertWritable(ctx, path);
       const before = await readOrNull(path);
       if (before === null || sha256(before) !== hash) continue;
-      changes.push({ path, action: "delete", before, after: null, beforeHash: hash, unmanagedOverwrite: false });
+      changes.push({ path, action: "delete", before, after: null, beforeHash: hash, unmanagedOverwrite: false, merged: false });
+    }
+    changes.sort((a, b) => a.path.localeCompare(b.path));
+
+    // MCP: Claude Code through its CLI, plus warnings for servers that would disappear.
+    const commands = mcp ? await planClaudeMcp(ctx, mcp) : [];
+    const warnings: Warning[] = [];
+    const claudeUnmanaged = commands.filter((c) => c.unmanaged).map((c) => c.name);
+    if (claudeUnmanaged.length) warnings.push({ kind: "unmanaged-mcp", tool: "claude", names: claudeUnmanaged });
+    if (mcp) {
+      const known = new Set(mcp.map((s) => s.name));
+      const { parse } = await import("smol-toml");
+      const text = await readOrNull(codex.config);
+      let real: string[] = [];
+      try {
+        real = Object.keys(((text ? parse(text) : {}) as { mcp_servers?: object }).mcp_servers ?? {});
+      } catch {
+        // unparsable config: the diff shows it
+      }
+      const codexUnmanaged = real.filter((n) => !known.has(n));
+      if (codexUnmanaged.length) warnings.push({ kind: "unmanaged-mcp", tool: "codex", names: codexUnmanaged });
     }
 
-    changes.sort((a, b) => a.path.localeCompare(b.path));
-    return { id: newApplyId(), createdAt: new Date().toISOString(), changes };
+    const pendingCommands = commands.some((c) => c.action !== "unchanged");
+    return {
+      id: newApplyId(),
+      createdAt: new Date().toISOString(),
+      changes,
+      commands,
+      warnings,
+      blocked: pendingCommands && !runners.claude ? (runners.claudeUnavailable ?? "not-found") : undefined,
+    };
   } finally {
     await rm(stagingRoot, { recursive: true, force: true });
   }
@@ -218,20 +326,28 @@ function newApplyId(): string {
 // ---------------------------------------------------------------------------
 // apply
 
-export async function apply(ctx: PathContext, set: ChangeSet): Promise<ApplyManifest> {
+export async function apply(ctx: PathContext, set: ChangeSet, runners: Pick<PipelineRunners, "claude">): Promise<ApplyManifest> {
   const pending = set.changes.filter((c) => c.action !== "unchanged");
+  const commands = set.commands.filter((c) => c.action !== "unchanged");
+  if (set.blocked) throw new Error(`Claude Code CLI cannot be used (${set.blocked}).`);
+  if (commands.length && !runners.claude) throw new Error("Claude Code CLI is not available.");
   for (const c of pending) assertWritable(ctx, c.path);
 
-  // Refuse if anything changed on disk since the preview.
+  // Refuse if anything changed since the preview.
   const conflicts: string[] = [];
   for (const c of pending) {
     const now = await readOrNull(c.path);
     if ((now === null ? null : sha256(now)) !== c.beforeHash) conflicts.push(c.path);
   }
+  if (commands.length) {
+    const current = await currentClaudeServers(ctx);
+    for (const c of commands) if (!sameDef(current.get(c.name) ?? null, c.before)) conflicts.push(`Claude Code MCP "${c.name}"`);
+  }
   if (conflicts.length) throw new ConflictError(conflicts);
 
+  // Backups may contain secrets (MCP config): user-only permissions.
   const dir = join(forgePaths(ctx).backups, set.id);
-  await mkdir(dir, { recursive: true });
+  await mkdir(dir, { recursive: true, mode: 0o700 });
   const state = await readState(ctx);
 
   // Back up everything first, then write.
@@ -240,7 +356,7 @@ export async function apply(ctx: PathContext, set: ChangeSet): Promise<ApplyMani
     let backup: string | null = null;
     if (c.before !== null) {
       backup = `${String(i).padStart(3, "0")}.bak`;
-      await writeFileAtomic(join(dir, backup), c.before);
+      await writeFileAtomic(join(dir, backup), c.before, 0o600);
     }
     entries.push({
       path: c.path,
@@ -251,28 +367,46 @@ export async function apply(ctx: PathContext, set: ChangeSet): Promise<ApplyMani
       previouslyManaged: state.managed[c.path] ?? null,
     });
   }
-  const manifest: ApplyManifest = { id: set.id, createdAt: new Date().toISOString(), entries };
-  await writeFileAtomic(join(dir, "manifest.json"), JSON.stringify(manifest, null, 2));
+  const commandEntries: CommandEntry[] = commands.map((c) => ({ tool: c.tool, name: c.name, before: c.before, after: c.after }));
+  const manifest: ApplyManifest = { id: set.id, createdAt: new Date().toISOString(), entries, commands: commandEntries };
+  await writeFileAtomic(join(dir, "manifest.json"), JSON.stringify(manifest, null, 2), 0o600);
 
-  const done: Change[] = [];
+  const doneFiles: Change[] = [];
+  const doneCommands: CommandEntry[] = [];
   try {
     for (const c of pending) {
       if (c.action === "delete") {
         await unlink(c.path);
         await removeEmptyParents(ctx, c.path);
       } else await writeFileAtomic(c.path, c.after!);
-      done.push(c);
+      doneFiles.push(c);
+    }
+    for (const c of commandEntries) {
+      await runClaudeChange(runners.claude!, c.name, c.before, c.after);
+      doneCommands.push(c);
     }
   } catch (e) {
-    // Roll back what was already written.
-    for (const c of done.reverse()) {
-      if (c.before === null) {
-        await rm(c.path, { force: true });
-        await removeEmptyParents(ctx, c.path);
-      } else await writeFileAtomic(c.path, c.before);
+    // Roll back what was already done, newest first.
+    const rollbackErrors: string[] = [];
+    for (const c of doneCommands.reverse()) {
+      await runClaudeChange(runners.claude!, c.name, c.after, c.before).catch((err: Error) => rollbackErrors.push(`${c.name}: ${err.message}`));
     }
-    await rm(dir, { recursive: true, force: true });
-    throw e;
+    for (const c of doneFiles.reverse()) {
+      try {
+        if (c.before === null) {
+          await rm(c.path, { force: true });
+          await removeEmptyParents(ctx, c.path);
+        } else await writeFileAtomic(c.path, c.before);
+      } catch (err) {
+        rollbackErrors.push(`${c.path}: ${(err as Error).message}`);
+      }
+    }
+    if (rollbackErrors.length === 0) {
+      await rm(dir, { recursive: true, force: true });
+      throw e;
+    }
+    // Keep the backup so nothing is lost; the manifest lists what was there before.
+    throw new Error(`${(e as Error).message}. Rolling back failed for: ${rollbackErrors.join("; ")}. Originals are kept in ${dir}.`);
   }
 
   for (const e of entries) {
@@ -291,7 +425,7 @@ export async function apply(ctx: PathContext, set: ChangeSet): Promise<ApplyMani
 
 export interface UndoResult {
   restored: string[];
-  /** Files edited by the user after the apply; left as they are. */
+  /** Files / servers changed by the user after the apply; left as they are. */
   skipped: string[];
 }
 
@@ -300,12 +434,27 @@ async function readManifest(ctx: PathContext, id: string): Promise<ApplyManifest
   return JSON.parse(await readFile(join(forgePaths(ctx).backups, id, "manifest.json"), "utf8")) as ApplyManifest;
 }
 
-export async function undo(ctx: PathContext, id: string): Promise<UndoResult> {
+export async function undo(ctx: PathContext, id: string, runners: Pick<PipelineRunners, "claude">): Promise<UndoResult> {
   const manifest = await readManifest(ctx, id);
   if (manifest.undoneAt) throw new Error("This apply was already undone.");
   const dir = join(forgePaths(ctx).backups, id);
   const state = await readState(ctx);
   const result: UndoResult = { restored: [], skipped: [] };
+
+  const commands = manifest.commands ?? [];
+  if (commands.length) {
+    if (!runners.claude) throw new Error("Claude Code CLI is not available to undo MCP changes.");
+    const current = await currentClaudeServers(ctx);
+    for (const c of [...commands].reverse()) {
+      const label = `Claude Code MCP "${c.name}"`;
+      if (!sameDef(current.get(c.name) ?? null, c.after)) {
+        result.skipped.push(label);
+        continue;
+      }
+      await runClaudeChange(runners.claude, c.name, c.after, c.before);
+      result.restored.push(label);
+    }
+  }
 
   for (const e of [...manifest.entries].reverse()) {
     assertWritable(ctx, e.path);
@@ -327,7 +476,7 @@ export async function undo(ctx: PathContext, id: string): Promise<UndoResult> {
 
   await writeState(ctx, state);
   manifest.undoneAt = new Date().toISOString();
-  await writeFileAtomic(join(dir, "manifest.json"), JSON.stringify(manifest, null, 2));
+  await writeFileAtomic(join(dir, "manifest.json"), JSON.stringify(manifest, null, 2), 0o600);
   return result;
 }
 
