@@ -70,12 +70,18 @@ export interface Change {
   merged: boolean;
 }
 
-export interface Warning {
-  kind: "unmanaged-mcp";
-  tool: "claude" | "codex";
-  /** MCP servers configured in the tool but not in Agent Forge: applying removes them. */
-  names: string[];
-}
+export type Warning =
+  | {
+      kind: "unmanaged-mcp";
+      tool: "claude" | "codex";
+      /** MCP servers configured in the tool but not in Agent Forge: applying removes them. */
+      names: string[];
+    }
+  | {
+      /** ~/.codex/AGENTS.override.md exists: Codex reads it instead of the AGENTS.md we write. */
+      kind: "codex-rule-override";
+      path: string;
+    };
 
 export interface ChangeSet {
   id: string;
@@ -302,6 +308,10 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
       }
       const codexUnmanaged = real.filter((n) => !known.has(n));
       if (codexUnmanaged.length) warnings.push({ kind: "unmanaged-mcp", tool: "codex", names: codexUnmanaged });
+    }
+
+    if (rule?.targets.includes("codex") && (await readOrNull(codex.overrideRulesFile)) !== null) {
+      warnings.push({ kind: "codex-rule-override", path: codex.overrideRulesFile });
     }
 
     const pendingCommands = commands.some((c) => c.action !== "unchanged");

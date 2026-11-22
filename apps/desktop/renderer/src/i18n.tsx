@@ -171,6 +171,8 @@ const en = {
   "mcp.unmanage": "Stop managing",
   "mcp.unmanageConfirm": "Stop managing MCP servers? Your tool config stays as it is.",
   "mcp.saved": "Saved \"{name}\". Use \"Preview & apply\" to write it to your tools.",
+  "mcp.codexExtra": "Other Codex settings",
+  "mcp.codexExtraHint": "Kept as they are in config.toml. Edit them there and import again to change them.",
 
   // history / preview additions
   "history.summary": "{files} file(s), {commands} command(s)",
@@ -178,6 +180,7 @@ const en = {
   "preview.commandsTitle": "Claude Code commands",
   "preview.commandsNote": "Claude Code's MCP servers are changed with its official CLI (claude mcp), not by editing its files.",
   "preview.unmanagedMcp": "{tool} has MCP servers that are not in Agent Forge: {names}. Applying removes them. To keep them, close this and use \"Import again\" on the MCP screen.",
+  "preview.codexOverride": "{path} exists, so Codex reads it instead of AGENTS.md. The rule written here has no effect in Codex until you remove or rename that file.",
   "preview.blocked": "Claude Code CLI was not found, so its MCP servers cannot be changed.",
   "preview.blockedSession": "Agent Forge was started from inside a Claude Code session, where Claude Code refuses MCP changes from other programs. Start Agent Forge from Finder or a regular terminal.",
   "cmd.add": "add",
@@ -369,12 +372,15 @@ const ko: Messages = {
   "mcp.unmanage": "관리 중단",
   "mcp.unmanageConfirm": "MCP 서버 관리를 중단할까요? 도구 설정은 그대로 남습니다.",
   "mcp.saved": "\"{name}\"을(를) 저장했습니다. 도구에 쓰려면 \"미리보기 후 적용\"을 누르세요.",
+  "mcp.codexExtra": "기타 Codex 설정",
+  "mcp.codexExtraHint": "config.toml에 있던 값을 그대로 유지합니다. 바꾸려면 config.toml에서 고친 뒤 다시 가져오세요.",
 
   "history.summary": "파일 {files}개, 명령 {commands}개",
   "preview.merged": "이 파일의 다른 설정은 그대로 두고 MCP 서버 부분만 바뀝니다.",
   "preview.commandsTitle": "Claude Code 명령",
   "preview.commandsNote": "Claude Code의 MCP 서버는 파일을 직접 고치지 않고 공식 CLI(claude mcp)로 바꿉니다.",
   "preview.unmanagedMcp": "{tool}에 Agent Forge 목록에 없는 MCP 서버가 있습니다: {names}. 적용하면 지워집니다. 남기려면 이 창을 닫고 MCP 화면에서 \"다시 가져오기\"를 누르세요.",
+  "preview.codexOverride": "{path} 파일이 있어서 Codex는 AGENTS.md 대신 그 파일을 읽습니다. 그 파일을 지우거나 이름을 바꾸기 전까지 여기서 쓴 규칙은 Codex에 적용되지 않습니다.",
   "preview.blocked": "Claude Code CLI를 찾지 못해 MCP 서버를 바꿀 수 없습니다.",
   "preview.blockedSession": "Agent Forge가 Claude Code 세션 안에서 실행되었습니다. 이 경우 Claude Code는 다른 프로그램의 MCP 변경을 거부합니다. Finder나 일반 터미널에서 Agent Forge를 실행하세요.",
   "cmd.add": "추가",

@@ -144,12 +144,15 @@ export function maskUrl(url?: string): string | undefined {
  * env / header values, secret-looking CLI args, URL credentials and query
  * values, and string values in tool-specific extra fields.
  */
+/** Numbers and booleans are shown; anything else (strings, tables) may be secret. */
+function maskExtra(extra: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, typeof v === "number" || typeof v === "boolean" ? v : MASK]));
+}
+
 export function maskMcpServer(server: McpServer): McpServer {
   const maskRecord = (r?: Record<string, string>) =>
     r ? Object.fromEntries(Object.keys(r).map((k) => [k, MASK])) : undefined;
-  const extra = Object.fromEntries(
-    Object.entries(server.extra).map(([k, v]) => [k, typeof v === "number" || typeof v === "boolean" ? v : MASK]),
-  );
+  const extra = maskExtra(server.extra);
   return {
     ...server,
     args: maskArgs(server.args),
@@ -215,6 +218,11 @@ export interface ManagedMcpServer {
   /** Secret values. Never sent to the renderer unmasked. */
   headers?: Record<string, string>;
   targets: ToolId[];
+  /**
+   * Codex-only fields kept as they were in config.toml (startup_timeout_sec,
+   * enabled = false, cwd, ...). Not editable in the app; may hold secrets.
+   */
+  codexExtra?: Record<string, unknown>;
 }
 
 /** The global top-level instructions (CLAUDE.md / AGENTS.md) managed by Agent Forge. */
@@ -227,5 +235,12 @@ export interface ManagedRule {
 export function maskManagedMcp(server: ManagedMcpServer): ManagedMcpServer {
   const maskRecord = (r?: Record<string, string>) =>
     r ? Object.fromEntries(Object.keys(r).map((k) => [k, MASK])) : undefined;
-  return { ...server, args: maskArgs(server.args), env: maskRecord(server.env), headers: maskRecord(server.headers), url: maskUrl(server.url) };
+  return {
+    ...server,
+    args: maskArgs(server.args),
+    env: maskRecord(server.env),
+    headers: maskRecord(server.headers),
+    url: maskUrl(server.url),
+    codexExtra: server.codexExtra && maskExtra(server.codexExtra),
+  };
 }

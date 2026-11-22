@@ -9,7 +9,7 @@ import { readCodex } from "../codex/read";
 import { Reader } from "../shared/read-utils";
 import type { PathContext } from "../types";
 import { claudeDefFromRead, sameDef, toClaudeDef } from "./claude-mcp";
-import { readManagedMcp, readManagedRule, saveManagedRule, writeManagedMcp } from "./config-store";
+import { codexExtraFrom, readManagedMcp, readManagedRule, saveManagedRule, writeManagedMcp } from "./config-store";
 
 export interface McpImportResult {
   added: string[];
@@ -19,6 +19,7 @@ export interface McpImportResult {
 
 function toManaged(s: McpServer, tool: ToolId): ManagedMcpServer {
   return {
+    codexExtra: tool === "codex" ? codexExtraFrom(s.extra, s.enabled) : undefined,
     name: s.name,
     transport: s.transport,
     command: s.command,
@@ -52,6 +53,7 @@ export async function importMcp(ctx: PathContext): Promise<McpImportResult> {
         continue;
       }
       prev.targets.push(tool);
+      if (tool === "codex") prev.codexExtra = codexExtraFrom(s.extra, s.enabled);
       if (!sameDef(toClaudeDef(prev), claudeDefFromRead(s))) conflicts.add(s.name);
     }
   }

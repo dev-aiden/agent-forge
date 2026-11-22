@@ -54,9 +54,13 @@ export function PreviewDialog({ set, busy, error, shortPath, onApply, onCancel }
 
         {(set.warnings.length > 0 || set.blocked) && (
           <div className="space-y-1 border-b border-amber-900 bg-amber-950/40 px-5 py-2 text-xs text-amber-200">
-            {set.warnings.map((w) => (
-              <p key={w.tool}>{t("preview.unmanagedMcp", { tool: TOOL_LABEL[w.tool], names: w.names.join(", ") })}</p>
-            ))}
+            {set.warnings.map((w) =>
+              w.kind === "unmanaged-mcp" ? (
+                <p key={w.tool}>{t("preview.unmanagedMcp", { tool: TOOL_LABEL[w.tool], names: w.names.join(", ") })}</p>
+              ) : (
+                <p key={w.kind}>{t("preview.codexOverride", { path: shortPath(w.path) })}</p>
+              ),
+            )}
             {set.blocked && <p className="text-red-300">{t(set.blocked === "inside-session" ? "preview.blockedSession" : "preview.blocked")}</p>}
           </div>
         )}

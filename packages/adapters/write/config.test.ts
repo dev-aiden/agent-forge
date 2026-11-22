@@ -212,3 +212,50 @@ test("mcp: a failed CLI command rolls back files and earlier commands", async ()
   assert.equal((await claudeServers()).aaa, undefined, "earlier command rolled back");
   assert.equal(await readFile(codexConfig(), "utf8"), before, "config.toml restored");
 });
+
+test("mcp: Codex-only fields (timeouts, enabled = false) survive import, edit and apply", async () => {
+  await put(
+    codexConfig(),
+    'model = "gpt-5"\n\n[mcp_servers.slow]\ncommand = "slow-mcp"\nstartup_timeout_sec = 20\ntool_timeout_sec = 90\nenabled = false\nbearer_token_env_var = "SECRET_BT"\n\n[mcp_servers.remote]\nurl = "https://example.invalid/mcp"\nbearer_token_env_var = "SECRET_RT"\n',
+  );
+  await importMcp(ctx);
+  const [slow] = (await readManagedMcp(ctx))!.filter((s) => s.name === "slow");
+  assert.deepEqual(slow.codexExtra, { startup_timeout_sec: 20, tool_timeout_sec: 90, enabled: false, bearer_token_env_var: "SECRET_BT" });
+
+  // The renderer sees the extras masked and sends them back masked: the stored values are kept.
+  const { maskManagedMcp } = await import("@agent-forge/model");
+  const masked = maskManagedMcp(slow);
+  assert.equal(masked.codexExtra?.bearer_token_env_var, MASK);
+  assert.equal(masked.codexExtra?.startup_timeout_sec, 20);
+  await saveMcpServer(ctx, { ...masked, args: ["--verbose"] }, "slow");
+  assert.equal((await readManagedMcp(ctx))!.find((s) => s.name === "slow")?.codexExtra?.bearer_token_env_var, "SECRET_BT");
+
+  const set = await preview(ctx, runners);
+  const change = set.changes.find((c) => c.path === codexConfig())!;
+  const { parse } = await import("smol-toml");
+  const after = parse(change.after!) as { model: string; mcp_servers: Record<string, Record<string, unknown>> };
+  assert.equal(after.model, "gpt-5");
+  assert.deepEqual({ ...after.mcp_servers.slow }, {
+    command: "slow-mcp",
+    args: ["--verbose"],
+    startup_timeout_sec: 20,
+    tool_timeout_sec: 90,
+    enabled: false,
+  });
+  // Codex rejects bearer_token_env_var on stdio servers (rulesync drops it); url servers keep it.
+  assert.deepEqual({ ...after.mcp_servers.remote }, { url: "https://example.invalid/mcp", bearer_token_env_var: "SECRET_RT" });
+  // The diff the renderer gets hides secret-looking fields on both sides.
+  const shown = displayChangeSet(set, (p) => p === codexConfig()).changes.find((c) => c.path === codexConfig())!;
+  assert.ok(!/SECRET_(BT|RT)/.test(shown.before!) && !/SECRET_(BT|RT)/.test(shown.after!));
+});
+
+test("rule: warns when AGENTS.override.md would shadow the Codex rule", async () => {
+  await importRule(ctx);
+  assert.deepEqual((await preview(ctx, runners)).warnings, []);
+  await put(join(home, ".codex", "AGENTS.override.md"), "# override\n");
+  assert.deepEqual((await preview(ctx, runners)).warnings, [
+    { kind: "codex-rule-override", path: join(home, ".codex", "AGENTS.override.md") },
+  ]);
+  await saveManagedRule(ctx, { body: "x", targets: ["claude"] });
+  assert.deepEqual((await preview(ctx, runners)).warnings, []);
+});

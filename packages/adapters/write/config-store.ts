@@ -71,8 +71,25 @@ export async function unmanageRule(ctx: PathContext): Promise<void> {
 // ---------------------------------------------------------------------------
 // MCP servers
 
+/** Keys Agent Forge models itself; everything else in an entry is Codex-only extra. */
+const OWNED_KEYS = new Set(["type", "command", "args", "env", "url", "headers", "targets", "disabled"]);
+/** Codex keys never passed through: rulesync keeps `tools` from the real config.toml, the rest are modeled. */
+const NOT_EXTRA = new Set(["command", "args", "env", "url", "http_headers", "tools", "__proto__", "constructor", "prototype"]);
+
+/** Codex-only fields from a config.toml server table, kept verbatim (rulesync passes unknown keys through). */
+export function codexExtraFrom(extra: Record<string, unknown>, enabled: boolean): Record<string, unknown> | undefined {
+  const out = Object.fromEntries(Object.entries(extra).filter(([k]) => !NOT_EXTRA.has(k) && !OWNED_KEYS.has(k)));
+  if (!enabled) out.enabled = false;
+  return Object.keys(out).length ? out : undefined;
+}
+
 function toRulesyncEntry(s: ManagedMcpServer): Record<string, unknown> {
-  const e: Record<string, unknown> = { type: s.transport };
+  // Codex extras first so modeled fields always win. Only the Codex output reads them
+  // (Claude Code is changed through its CLI from the modeled fields).
+  const { enabled, ...extra } = s.codexExtra ?? {};
+  const e: Record<string, unknown> = { ...extra, type: s.transport };
+  // rulesync drops a server written with `enabled = false`; its spelling is `disabled`.
+  if (enabled === false) e.disabled = true;
   if (s.command) e.command = s.command;
   if (s.args?.length) e.args = s.args;
   if (s.env && Object.keys(s.env).length) e.env = s.env;
@@ -87,6 +104,8 @@ function fromRulesyncEntry(name: string, v: unknown): ManagedMcpServer | null {
   const e = v as Record<string, unknown>;
   const type = str(e.type);
   const transport: McpTransport = type === "http" || type === "sse" ? type : "stdio";
+  const extra = Object.fromEntries(Object.entries(e).filter(([k]) => !OWNED_KEYS.has(k) && !NOT_EXTRA.has(k)));
+  if (e.disabled === true) extra.enabled = false;
   return {
     name,
     transport,
@@ -96,6 +115,7 @@ function fromRulesyncEntry(name: string, v: unknown): ManagedMcpServer | null {
     url: str(e.url),
     headers: stringRecord(e.headers),
     targets: e.targets === undefined ? [...WRITABLE_AGENT_TOOLS] : targetsFrom(e.targets),
+    codexExtra: Object.keys(extra).length ? extra : undefined,
   };
 }
 
@@ -155,6 +175,8 @@ export function unmaskEdit(incoming: ManagedMcpServer, stored: ManagedMcpServer 
   else if (url?.includes(MASK)) throw new Error("Re-enter the hidden URL values.");
   return {
     ...incoming,
+    // Not editable in the app (and masked in the renderer): always the stored value.
+    codexExtra: stored?.codexExtra,
     args,
     url,
     env: record(incoming.env, stored?.env),

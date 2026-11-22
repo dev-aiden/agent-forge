@@ -127,6 +127,9 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
     select(null);
   }
 
+  // Read-only; the main process keeps the stored values on save.
+  const codexExtra = servers?.find((s) => s.name === editing)?.codexExtra;
+
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
 
   if (servers === undefined) return <div className="flex-1" />;
@@ -215,6 +218,15 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
             <Field label={t("agents.applyTo")}>
               <TargetPicker value={draft.targets} onChange={(v) => set("targets", v)} />
             </Field>
+            {codexExtra && (
+              <Field label={t("mcp.codexExtra")} hint={t("mcp.codexExtraHint")}>
+                <pre className="rounded border border-neutral-800 bg-neutral-950 px-3 py-2 font-mono text-xs text-neutral-400">
+                  {Object.entries(codexExtra)
+                    .map(([k, v]) => `${k} = ${typeof v === "string" ? v : JSON.stringify(v)}`)
+                    .join("\n")}
+                </pre>
+              </Field>
+            )}
             {draft.transport === "stdio" ? (
               <>
                 <Field label={t("mcp.command")}>

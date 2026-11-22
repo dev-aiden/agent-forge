@@ -5,6 +5,8 @@ import { MASK, maskArgs, maskUrl } from "@agent-forge/model";
 import type { ClaudeMcpDef } from "./claude-mcp";
 import type { ChangeSet } from "./pipeline";
 
+const SECRET_KEY = /(key|token|secret|password|passwd|auth|credential|bearer|cookie|session)/i;
+
 const maskRecord = (r: unknown) =>
   r && typeof r === "object" && !Array.isArray(r) ? Object.fromEntries(Object.keys(r).map((k) => [k, MASK])) : r;
 
@@ -30,6 +32,8 @@ export function maskCodexConfig(text: string | null): string | null {
       if (s.http_headers) s.http_headers = maskRecord(s.http_headers);
       if (Array.isArray(s.args)) s.args = maskArgs(s.args.map(String));
       if (typeof s.url === "string") s.url = maskUrl(s.url);
+      // Other string fields with secret-looking names (bearer_token, ...).
+      for (const [k, v] of Object.entries(s)) if (typeof v === "string" && SECRET_KEY.test(k)) s[k] = MASK;
     }
     return stringifyToml(data);
   } catch {

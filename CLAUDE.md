@@ -43,6 +43,8 @@
     - MCP: `~/.agent-forge/source/mcp.jsonc`(0600) → Codex `config.toml`(실제 파일을 스테이징에 복사해 다른 키 보존), Claude는 CLI
     - 비밀값(env·headers·인자·URL 쿼리)은 렌더러로 보낼 때 가림. 가려진 값을 그대로 저장하면 원래 값 유지
     - Claude Code 세션 안에서 실행된 앱은 Claude MCP 변경을 막음 (Claude Code가 세션 안 stdin 추가를 거부하므로 우회하지 않음)
+    - Codex 전용 서버 필드(`startup_timeout_sec`, `enabled = false` 등)는 `codexExtra`로 그대로 보존 (앱에서는 읽기 전용, rulesync에는 `disabled: true`로 전달)
+    - `~/.codex/AGENTS.override.md`가 있으면 미리보기에서 경고 (Codex가 AGENTS.md 대신 읽음)
 - 2주차 완료: 공통 데이터 구조(`packages/model`), Claude Code·Codex 읽기 어댑터, 설정 한눈에 보기 화면, 파일 감시 자동 갱신
 - 1주차 완료:
   - `npm run scan` — 4개 도구 설정 경로·형식 스캐너 (`packages/adapters/scripts/scan.ts`)
