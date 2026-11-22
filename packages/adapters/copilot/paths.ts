@@ -1,4 +1,6 @@
 // GitHub Copilot CLI config locations. Single source of truth for Copilot CLI paths.
+// Copilot CLI is not installed on the development machine: every path here is
+// taken from documentation and verified only with fake files.
 import { join } from "node:path";
 import type { Candidate, PathContext, ToolDefinition } from "../types";
 
@@ -7,27 +9,52 @@ export function copilotHome(ctx: PathContext): string {
   return ctx.env.COPILOT_HOME ?? join(ctx.home, ".copilot");
 }
 
-function candidates(ctx: PathContext): Candidate[] {
+export function copilotPaths(ctx: PathContext) {
   const g = copilotHome(ctx);
   const p = ctx.project;
   const gh = join(p, ".github");
+  return {
+    global: {
+      rulesFile: join(g, "copilot-instructions.md"),
+      agentsDir: join(g, "agents"),
+      skillsDir: join(g, "skills"),
+      mcpConfig: join(g, "mcp-config.json"),
+      hooksDir: join(g, "hooks"),
+      settings: join(g, "settings.json"),
+    },
+    project: {
+      rulesFile: join(gh, "copilot-instructions.md"),
+      instructionsDir: join(gh, "instructions"),
+      agentsFile: join(p, "AGENTS.md"),
+      agentsDir: join(gh, "agents"),
+      skillsDir: join(gh, "skills"),
+      mcpConfig: join(gh, "mcp.json"),
+      hooksDir: join(gh, "hooks"),
+      settings: join(gh, "copilot", "settings.json"),
+    },
+  };
+}
+
+function candidates(ctx: PathContext): Candidate[] {
+  const { global: g, project: p } = copilotPaths(ctx);
+  const mcp: Candidate["extract"] = { type: "mcp-json", keys: ["mcpServers", "servers"] };
   const list: Omit<Candidate, "tool">[] = [
     // global
-    { kind: "rules", scope: "global", path: join(g, "copilot-instructions.md"), type: "file", format: "markdown" },
-    { kind: "agents", scope: "global", path: join(g, "agents"), type: "dir", format: "markdown", count: "agent-md" },
-    { kind: "skills", scope: "global", path: join(g, "skills"), type: "dir", format: "markdown", count: "skill" },
-    { kind: "mcp", scope: "global", path: join(g, "mcp-config.json"), type: "file", format: "json", extract: { type: "mcp-json", keys: ["mcpServers", "servers"] } },
-    { kind: "hooks", scope: "global", path: join(g, "hooks"), type: "dir", format: "json", count: "json" },
-    { kind: "settings", scope: "global", path: join(g, "settings.json"), type: "file", format: "json", extract: { type: "top-keys" } },
+    { kind: "rules", scope: "global", path: g.rulesFile, type: "file", format: "markdown" },
+    { kind: "agents", scope: "global", path: g.agentsDir, type: "dir", format: "markdown", count: "agent-md" },
+    { kind: "skills", scope: "global", path: g.skillsDir, type: "dir", format: "markdown", count: "skill" },
+    { kind: "mcp", scope: "global", path: g.mcpConfig, type: "file", format: "json", extract: mcp },
+    { kind: "hooks", scope: "global", path: g.hooksDir, type: "dir", format: "json", count: "json" },
+    { kind: "settings", scope: "global", path: g.settings, type: "file", format: "json", extract: { type: "top-keys" } },
     // project
-    { kind: "rules", scope: "project", path: join(gh, "copilot-instructions.md"), type: "file", format: "markdown" },
-    { kind: "rules", scope: "project", path: join(gh, "instructions"), type: "dir", format: "markdown", count: "md", note: "*.instructions.md" },
-    { kind: "rules", scope: "project", path: join(p, "AGENTS.md"), type: "file", format: "markdown", note: "shared with codex, antigravity" },
-    { kind: "agents", scope: "project", path: join(gh, "agents"), type: "dir", format: "markdown", count: "agent-md" },
-    { kind: "skills", scope: "project", path: join(gh, "skills"), type: "dir", format: "markdown", count: "skill" },
-    { kind: "mcp", scope: "project", path: join(gh, "mcp.json"), type: "file", format: "json", extract: { type: "mcp-json", keys: ["mcpServers", "servers"] }, note: "unverified path" },
-    { kind: "hooks", scope: "project", path: join(gh, "hooks"), type: "dir", format: "json", count: "json" },
-    { kind: "settings", scope: "project", path: join(gh, "copilot", "settings.json"), type: "file", format: "json", extract: { type: "top-keys" } },
+    { kind: "rules", scope: "project", path: p.rulesFile, type: "file", format: "markdown" },
+    { kind: "rules", scope: "project", path: p.instructionsDir, type: "dir", format: "markdown", count: "md", note: "*.instructions.md" },
+    { kind: "rules", scope: "project", path: p.agentsFile, type: "file", format: "markdown", note: "shared with codex, antigravity" },
+    { kind: "agents", scope: "project", path: p.agentsDir, type: "dir", format: "markdown", count: "agent-md" },
+    { kind: "skills", scope: "project", path: p.skillsDir, type: "dir", format: "markdown", count: "skill" },
+    { kind: "mcp", scope: "project", path: p.mcpConfig, type: "file", format: "json", extract: mcp, note: "unverified path" },
+    { kind: "hooks", scope: "project", path: p.hooksDir, type: "dir", format: "json", count: "json" },
+    { kind: "settings", scope: "project", path: p.settings, type: "file", format: "json", extract: { type: "top-keys" } },
   ];
   return list.map((c) => ({ tool: "copilot", ...c }));
 }

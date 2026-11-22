@@ -1,19 +1,25 @@
 // Public entry of @agent-forge/adapters.
 import type { ToolConfig, ToolId } from "@agent-forge/model";
+import { readAntigravity } from "./antigravity/read";
 import { readClaude } from "./claude/read";
 import { readCodex } from "./codex/read";
+import { readCopilot } from "./copilot/read";
 import type { PathContext } from "./types";
 
+export { readAntigravity } from "./antigravity/read";
 export { readClaude } from "./claude/read";
 export { readCodex } from "./codex/read";
+export { readCopilot } from "./copilot/read";
 export { scan, TOOLS, type ScanResult, type ScanEntry, type ToolSummary } from "./scan";
 export { isSensitive } from "./shared/read-utils";
 export type { PathContext } from "./types";
 
-/** Tools that have a read adapter so far. */
-export const READERS: Partial<Record<ToolId, (ctx: PathContext) => Promise<ToolConfig>>> = {
+/** Read adapter per tool. */
+export const READERS: Record<ToolId, (ctx: PathContext) => Promise<ToolConfig>> = {
   claude: readClaude,
   codex: readCodex,
+  copilot: readCopilot,
+  antigravity: readAntigravity,
 };
 
 // Writing app-managed items (preview → apply → undo).
