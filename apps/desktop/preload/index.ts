@@ -7,6 +7,13 @@ const api: AgentForgeApi = {
   getInfo: () => ipcRenderer.invoke(IPC.getInfo),
   getOverview: (project) => ipcRenderer.invoke(IPC.getOverview, project),
   pickProject: () => ipcRenderer.invoke(IPC.pickProject),
+  onOverviewChanged: (callback) => {
+    const listener = (_event: unknown, overview: Parameters<typeof callback>[0]) => callback(overview);
+    ipcRenderer.on(IPC.overviewChanged, listener);
+    return () => {
+      ipcRenderer.removeListener(IPC.overviewChanged, listener);
+    };
+  },
   notifyReady: (error) => ipcRenderer.send(IPC.rendererReady, typeof error === "string" ? error : undefined),
 };
 

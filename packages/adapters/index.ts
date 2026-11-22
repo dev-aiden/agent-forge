@@ -7,6 +7,7 @@ import type { PathContext } from "./types";
 export { readClaude } from "./claude/read";
 export { readCodex } from "./codex/read";
 export { scan, TOOLS, type ScanResult, type ScanEntry, type ToolSummary } from "./scan";
+export { isSensitive } from "./shared/read-utils";
 export type { PathContext } from "./types";
 
 /** Tools that have a read adapter so far. */

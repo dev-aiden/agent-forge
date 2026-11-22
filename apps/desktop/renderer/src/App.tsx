@@ -12,7 +12,10 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [toolId, setToolId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [autoUpdatedAt, setAutoUpdatedAt] = useState<string | null>(null);
   const notified = useRef(false);
+  const projectRef = useRef<string | null | undefined>(undefined);
+  projectRef.current = project;
 
   const notifyOnce = (err?: string) => {
     if (notified.current) return;
@@ -49,6 +52,17 @@ export function App() {
   useEffect(() => {
     if (project !== undefined) void load(project);
   }, [project, load]);
+
+  // Live updates pushed by the main process when config files change on disk.
+  useEffect(
+    () =>
+      window.agentForge.onOverviewChanged((o) => {
+        if (o.project !== (projectRef.current ?? null)) return;
+        setOverview(o);
+        setAutoUpdatedAt(o.readAt);
+      }),
+    [],
+  );
 
   const visibleTools = useMemo(() => overview?.tools.filter((t) => t.detected) ?? [], [overview]);
   const tool = visibleTools.find((t) => t.id === toolId) ?? visibleTools[0] ?? null;
@@ -93,8 +107,9 @@ export function App() {
         )}
         <div className="ml-auto flex items-center gap-3">
           {overview && (
-            <span className="text-xs text-neutral-500">
-              Read {new Date(overview.readAt).toLocaleTimeString()}
+            <span className="flex items-center gap-1.5 text-xs text-neutral-500" title="Config files are watched for changes.">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              {autoUpdatedAt === overview.readAt ? "Updated" : "Read"} {new Date(overview.readAt).toLocaleTimeString()}
             </span>
           )}
           <button className="btn" disabled={loading || project === undefined} onClick={() => project !== undefined && load(project)}>

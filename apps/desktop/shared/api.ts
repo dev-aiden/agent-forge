@@ -41,6 +41,11 @@ export interface AgentForgeApi {
   getOverview(project: string | null): Promise<Overview>;
   /** Opens a folder picker. Resolves to the chosen directory or null. */
   pickProject(): Promise<string | null>;
+  /**
+   * Subscribes to config changes on disk for the project of the last getOverview call.
+   * Fires only when the overview actually changed. Returns an unsubscribe function.
+   */
+  onOverviewChanged(callback: (overview: Overview) => void): () => void;
   /** Called once the first screen has rendered (used by --smoke-test). Pass an error message on failure. */
   notifyReady(error?: string): void;
 }
@@ -49,5 +54,6 @@ export const IPC = {
   getInfo: "app:get-info",
   getOverview: "config:get-overview",
   pickProject: "dialog:pick-project",
+  overviewChanged: "config:overview-changed",
   rendererReady: "app:renderer-ready",
 } as const;

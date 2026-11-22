@@ -2,7 +2,9 @@ import { app, BrowserWindow, dialog, ipcMain, type IpcMainEvent, type IpcMainInv
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { IPC, type AppInfo } from "../shared/api";
-import { buildOverview, validateProject } from "./overview";
+import { homedir } from "node:os";
+import { buildOverview, overviewFingerprint, validateProject } from "./overview";
+import { ConfigWatcher, watchedPaths } from "./watch";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -22,6 +24,26 @@ function argProject(): string | null {
 }
 
 let mainWindow: BrowserWindow | null = null;
+
+// Live updates: the watcher follows the project of the last getOverview call.
+// ~/.claude.json is rewritten by Claude Code all the time, so updates are only
+// pushed when the overview really changed.
+let watchedProject: string | null | undefined;
+let lastFingerprint = "";
+
+const watcher = new ConfigWatcher(() => {
+  const project = watchedProject;
+  if (project === undefined || !mainWindow) return;
+  buildOverview(project)
+    .then((overview) => {
+      if (project !== watchedProject) return; // project switched meanwhile
+      const fp = overviewFingerprint(overview);
+      if (fp === lastFingerprint) return;
+      lastFingerprint = fp;
+      mainWindow?.webContents.send(IPC.overviewChanged, overview);
+    })
+    .catch((e) => console.error("overview refresh failed:", e));
+});
 
 function smokeFail(reason: string): void {
   if (!SMOKE) return;
@@ -93,7 +115,17 @@ ipcMain.handle(IPC.getInfo, (event) => {
 
 ipcMain.handle(IPC.getOverview, async (event, project: unknown) => {
   if (!trusted(event)) throw new Error("untrusted sender");
-  return buildOverview(await validateProject(project));
+  const valid = await validateProject(project);
+  const overview = await buildOverview(valid);
+  lastFingerprint = overviewFingerprint(overview);
+  if (valid !== watchedProject) {
+    watchedProject = valid;
+    // Watching is best-effort: the overview is still returned if it fails.
+    watcher.watch(watchedPaths({ home: homedir(), project: valid ?? "", env: process.env })).catch((e) =>
+      console.error("cannot watch config paths:", e),
+    );
+  }
+  return overview;
 });
 
 ipcMain.handle(IPC.pickProject, async (event) => {
@@ -118,6 +150,10 @@ app.whenReady().then(() => {
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
   });
+});
+
+app.on("before-quit", () => {
+  void watcher.close();
 });
 
 app.on("window-all-closed", () => {
