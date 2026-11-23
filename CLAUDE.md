@@ -32,6 +32,12 @@
 - 렌더러는 Node 접근 없이(contextIsolation) preload로 노출한 API만 쓴다.
 
 ## 현재 단계와 다음 작업
+- 6주차: 기본 템플릿(`gallery/`)과 지인 테스트 배포 준비
+  - 형식: `gallery/{agents,skills,rules,mcp}/` 마크다운(평평한 `key: value` frontmatter)·JSON, 파서는 `packages/model/gallery.ts`, 렌더러가 빌드 때 `import.meta.glob`으로 포함 (IPC·파일 읽기 없음)
+  - 템플릿은 입력란만 채움(저장·적용은 사용자가). 규칙은 끝에 덧붙이기만, 같은 이름은 `-2` 붙임
+  - 지시문은 영어, 제목·소개는 한국어/영어. 비밀값 금지(MCP env·headers는 `${VAR}`만) — `npm test`가 검사
+  - GitHub MCP 템플릿은 뺌: Codex가 `${VAR}` 헤더를 풀지 않아 도구마다 동작이 다름
+  - 공개 릴리스는 아직 안 함. 설치 파일은 `apps/desktop/release/share/`에 모아 지인에게 직접 전달
 - 5주차: 라이트/다크 테마(설정), 실행 창 개선(다시 실행·글자 크기·찾기·링크·Windows 복사/붙여넣기), Copilot·Antigravity 읽기 어댑터(미확인 경로 표시), 프로젝트 단위 쓰기
   - 프로젝트 쓰기 결정: 원본은 `~/.agent-forge/projects/<이름-해시>/`(내 컴퓨터에만), 결과 파일만 프로젝트 안에 생김
   - 프로젝트 출력: `.claude/agents|skills`, `.codex/agents`, `.agents/skills`, `CLAUDE.md`, `AGENTS.md`, `.mcp.json`(Claude, 파일로 직접), `.codex/config.toml`
