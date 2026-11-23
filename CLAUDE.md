@@ -31,51 +31,64 @@
 - 감지되지 않은 도구는 화면에서 숨긴다. 지원 도구 목록은 설정에서 끄고 켤 수 있게 한다.
 - 렌더러는 Node 접근 없이(contextIsolation) preload로 노출한 API만 쓴다.
 
-## 현재 단계와 다음 작업
-- 7주차: 기존 에이전트·스킬 가져오기, Intel Mac 빌드
-  - 가져오기: `importAgents`/`importSkills` (`packages/adapters/write/import.ts`). 화면에 없는 필드는 `claudeExtra`·`codexExtra`(에이전트), `extra`(스킬, rulesync 형식: 최상위 키 + `claudecode` 섹션)로 보존. 앱에서 저장해도 유지(렌더러는 보내지 않음)
-  - 스킬 묶음 파일은 소스 폴더로 복사, 이름 바꾸면 폴더째 이동. 가져오지 않는 경우: 바이너리 파일(파이프라인이 텍스트만 다룸), 링크, 200개/20MB 초과, Codex `agents/openai.yaml`, 옛 위치 `~/.codex/skills`, claude.ai 동기화 스킬
-  - 미리보기: frontmatter 값과 본문이 같고 형식만 다르면(키 순서·따옴표) `unchanged`로 보고 원래 파일 유지 (`sameMarkdown`). 가져온 직후 적용은 "이미 최신"이어야 함 — 테스트로 확인
-  - Intel Mac: `mac-x64.dmg` 추가(node-pty x64 prebuild 사용), CI가 Rosetta로 x64 스모크 테스트
-- 6주차: 기본 템플릿(`gallery/`)과 지인 테스트 배포 준비
-  - 형식: `gallery/{agents,skills,rules,mcp}/` 마크다운(평평한 `key: value` frontmatter)·JSON, 파서는 `packages/model/gallery.ts`, 렌더러가 빌드 때 `import.meta.glob`으로 포함 (IPC·파일 읽기 없음)
-  - 템플릿은 입력란만 채움(저장·적용은 사용자가). 규칙은 끝에 덧붙이기만, 같은 이름은 `-2` 붙임
-  - 지시문은 영어, 제목·소개는 한국어/영어. 비밀값 금지(MCP env·headers는 `${VAR}`만) — `npm test`가 검사
-  - GitHub MCP 템플릿은 뺌: Codex가 `${VAR}` 헤더를 풀지 않아 도구마다 동작이 다름
-  - 공개 릴리스는 아직 안 함. 설치 파일은 `apps/desktop/release/share/`에 모아 지인에게 직접 전달
-- 5주차: 라이트/다크 테마(설정), 실행 창 개선(다시 실행·글자 크기·찾기·링크·Windows 복사/붙여넣기), Copilot·Antigravity 읽기 어댑터(미확인 경로 표시), 프로젝트 단위 쓰기
-  - 프로젝트 쓰기 결정: 원본은 `~/.agent-forge/projects/<이름-해시>/`(내 컴퓨터에만), 결과 파일만 프로젝트 안에 생김
-  - 프로젝트 출력: `.claude/agents|skills`, `.codex/agents`, `.agents/skills`, `CLAUDE.md`, `AGENTS.md`, `.mcp.json`(Claude, 파일로 직접), `.codex/config.toml`
-  - 렌더러는 "전역/이 프로젝트"만 고르고 실제 폴더는 메인 프로세스가 정함. 홈 폴더·그 상위·`~/.agent-forge`는 프로젝트로 거부
-  - 사용법 문서: `docs/ko/사용법.md` (지인 테스트용)
-- 4주차: 실행 창 — 실행 창(터미널 탭: 감지된 CLI·셸을 node-pty로 실행), 한국어/영어 화면, 설정(언어·도구 켜고 끄기, `~/.agent-forge/settings.json`), 로그인 셸 PATH 가져오기
-  - node-pty: macOS·Windows는 prebuild, Linux는 설치 시 빌드. macOS `spawn-helper` 실행 권한은 루트 `postinstall`(scripts/fix-node-pty.mjs)이 복구
-  - 스모크 테스트가 rulesync 워커와 pty 실행까지 확인
-- 3주차 완료: 에이전트를 앱에서 만들어 Claude Code·Codex 전역에 적용 (미리보기 → 백업 → 적용 → 되돌리기)
-  - 쓰기 경로: `packages/adapters/write/` (rulesync는 임시 홈을 가리키는 별도 프로세스에서만 실행, 쓰기 허용 폴더 제한)
-  - 스킬 쓰기 완료: `~/.claude/skills/<이름>/`, `~/.agents/skills/<이름>/`(Codex). claude.ai 동기화 폴더(`~/.claude/skills/synced`)는 쓰기 금지, 이름 `synced` 예약
-  - 규칙·MCP 쓰기 완료 (결정: 처음에 기존 설정을 가져와 합침, Claude Code MCP는 `~/.claude.json`을 직접 쓰지 않고 공식 CLI `claude mcp add-json - -s user`/`remove`로 변경)
-    - 전역 규칙: `~/.agent-forge/source/rules/root.md` → `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`
-    - MCP: `~/.agent-forge/source/mcp.jsonc`(0600) → Codex `config.toml`(실제 파일을 스테이징에 복사해 다른 키 보존), Claude는 CLI
-    - 비밀값(env·headers·인자·URL 쿼리)은 렌더러로 보낼 때 가림. 가려진 값을 그대로 저장하면 원래 값 유지
-    - Claude Code 세션 안에서 실행된 앱은 Claude MCP 변경을 막음 (Claude Code가 세션 안 stdin 추가를 거부하므로 우회하지 않음)
-    - Codex 전용 서버 필드(`startup_timeout_sec`, `enabled = false` 등)는 `codexExtra`로 그대로 보존 (앱에서는 읽기 전용, rulesync에는 `disabled: true`로 전달)
-    - `~/.codex/AGENTS.override.md`가 있으면 미리보기에서 경고 (Codex가 AGENTS.md 대신 읽음)
-- 2주차 완료: 공통 데이터 구조(`packages/model`), Claude Code·Codex 읽기 어댑터, 설정 한눈에 보기 화면, 파일 감시 자동 갱신
-- 1주차 완료:
-  - `npm run scan` — 4개 도구 설정 경로·형식 스캐너 (`packages/adapters/scripts/scan.ts`)
-  - rulesync 조사 — `docs/ko/rulesync-research.md` (MIT, 라이브러리 사용 가능. 임시 폴더 생성 → diff → 백업 후 적용 방식으로 감싼다)
-  - Electron 빈 앱 — `apps/desktop`, CI(`.github/workflows/desktop.yml`)에서 macOS·Windows·Linux 패키지 앱 스모크 테스트 통과
-- 확인 필요: Codex·Copilot·Antigravity는 이 컴퓨터에 설치되어 있지 않아 경로를 가짜 파일로만 검증했다 (`paths.ts`의 "unverified path")
-- 저장소: https://github.com/dev-aiden/agent-forge (공개). 커밋 작성자 이메일은 GitHub noreply 주소를 쓴다
+## 설계 결정 (바꾸기 전에 이유를 확인할 것)
+
+### 쓰기 파이프라인 (`packages/adapters/write/`)
+- 흐름: 앱 원본(`~/.agent-forge/source`) → rulesync를 **임시 홈을 가리키는 별도 프로세스**에서 실행 → 결과를 실제 파일과 비교한 미리보기 → 백업 → 적용 → 되돌리기
+- 쓰기 허용 폴더·파일을 제한한다(`assertWritable`). 미리보기 이후 바뀐 파일이 있으면 적용 거부, 되돌리기는 사용자가 고친 파일을 건드리지 않는다
+- 형식만 다른 마크다운(frontmatter 값·본문이 같음)은 `unchanged`로 보고 원래 파일 유지 (`sameMarkdown`)
+- 파이프라인은 텍스트 파일만 다룬다 (바이너리는 깨지므로 가져오지 않음)
+
+### 도구별 출력
+| | 전역 | 프로젝트 |
+|---|---|---|
+| 에이전트 | `~/.claude/agents/*.md`, `~/.codex/agents/*.toml` | `.claude/agents`, `.codex/agents` |
+| 스킬 | `~/.claude/skills/<이름>/`, `~/.agents/skills/<이름>/` | `.claude/skills`, `.agents/skills` |
+| 규칙 | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` | `CLAUDE.md`, `AGENTS.md` |
+| MCP | Claude: 공식 CLI `claude mcp add-json - -s user`/`remove` (`~/.claude.json` 직접 쓰기 금지), Codex: `config.toml`의 MCP 부분만 | `.mcp.json`(파일로 직접), `.codex/config.toml` |
+
+- claude.ai 동기화 스킬(`~/.claude/skills/synced`)은 쓰기 금지, 이름 `synced` 예약
+- Codex `config.toml`·`.mcp.json`은 실제 파일을 스테이징에 복사해 다른 키를 보존
+- `~/.codex/AGENTS.override.md`가 있으면 미리보기에서 경고 (Codex가 AGENTS.md 대신 읽음)
+- Claude Code 세션 안에서 실행된 앱은 전역 Claude MCP 변경을 막는다 (Claude Code가 세션 안 stdin 추가를 거부하므로 우회하지 않음)
+
+### 가져오기와 보존
+- 처음에 기존 설정을 가져와 합친다: `importAgents`/`importSkills`/`importRule`/`importMcp` (`write/import.ts`). 가져온 직후 적용은 "이미 최신"이어야 한다 — 테스트로 확인
+- 화면에 없는 필드는 읽기 전용으로 보존: 에이전트 `claudeExtra`·`codexExtra`, 스킬 `extra`(rulesync 형식: 최상위 키 + `claudecode` 섹션)와 묶음 파일, MCP `codexExtra`. 렌더러는 이 값을 보내지 않고, 저장할 때 저장된 값을 유지한다
+- 가져오지 않는 스킬: 바이너리·링크·200개/20MB 초과, Codex `agents/openai.yaml`, 옛 위치 `~/.codex/skills`, claude.ai 동기화 스킬
+- 같은 이름이 두 도구에서 다르면 Claude Code 쪽을 가져오고 알린다
+
+### 비밀값
+- MCP의 env·headers·인자·URL 쿼리는 렌더러로 보낼 때 가린다. 가려진 값을 그대로 저장하면 원래 값 유지
+- 원본 `mcp.jsonc`와 백업은 0600. 프로젝트 `.mcp.json`에 값이 그대로 들어가면 미리보기에서 경고
+
+### 프로젝트 단위 쓰기
+- 원본은 `~/.agent-forge/projects/<이름-해시>/`(내 컴퓨터에만), 결과 파일만 프로젝트 안에 생긴다
+- 렌더러는 "전역/이 프로젝트"만 고르고 실제 폴더는 메인 프로세스가 정한다. 홈 폴더·그 상위·`~/.agent-forge`는 프로젝트로 거부
+
+### 템플릿 (`gallery/`)
+- `gallery/{agents,skills,rules,mcp}/` 마크다운(평평한 `key: value` frontmatter)·JSON. 파서는 `packages/model/gallery.ts`, 렌더러가 빌드 때 `import.meta.glob`으로 포함 (IPC·파일 읽기 없음)
+- 입력란만 채운다(저장·적용은 사용자가). 규칙은 끝에 덧붙이기만. 지시문은 영어, 제목·소개는 한국어/영어
+- 비밀값 금지(MCP env·headers는 `${VAR}`만) — `npm test`가 검사. Codex가 `${VAR}` 헤더를 풀지 않으므로 토큰이 필요한 MCP 템플릿은 넣지 않는다
+
+### 네트워크
+- 유일한 네트워크 요청은 새 버전 확인(`main/update.ts`: GitHub `/releases/latest`만, 설정에서 끔). 다른 정보는 보내지 않고 자동 설치하지 않는다. 스모크 테스트 중에는 요청하지 않음
+
+### 실행 창과 빌드
+- 터미널: xterm.js + node-pty. node-pty는 prebuild(macOS arm64·x64, Windows) 사용, Linux는 설치 시 빌드. macOS `spawn-helper` 실행 권한은 루트 `postinstall`(`scripts/fix-node-pty.mjs`)이 복구
+- 로그인 셸의 PATH를 가져와 CLI를 찾는다
+- CI(`.github/workflows/desktop.yml`): macOS·Windows·Linux 패키지 앱 스모크 테스트(rulesync 워커와 pty 실행까지). Intel Mac은 Rosetta로 참고용 확인
+- 아직 코드 서명 없음
+
+### 확인 필요
+- Copilot·Antigravity 경로와 Codex 에이전트 폴더는 실제 설치로 확인하지 못했다 (`paths.ts`의 "unverified path", 화면에 `미확인 경로` 배지)
 
 ## 작업 방식
-- 기능 하나씩, 플랜을 먼저 보여주고 승인 후 구현
-- 변경 후 실행해서 확인, 커밋 메시지는 한국어로
-- 사용자 설정 파일을 건드리는 코드는 테스트용 임시 폴더에서 먼저 검증한다
-- 텔레그램으로 지시를 받을 때는 답을 짧게 요약하고, 커밋 전에 바뀐 파일 목록을 먼저 보여준다
-- UI는 화면 시안(에이전트 만들기 화면)을 기준으로 맞춘다
-- README·코드 주석은 영어, 문서 `docs/ko/`는 한국어
+- 사용자 설정 파일을 건드리는 코드는 테스트용 임시 폴더(가짜 HOME)에서 먼저 검증한다
+- 변경 후 실행해서 확인한다 (`npm test`, `npm run typecheck`, 필요하면 앱을 띄워 확인)
+- 커밋 메시지는 한국어. README·코드 주석·`docs/usage.md`는 영어, `docs/ko/`는 한국어
+- 커밋 작성자 이메일은 GitHub noreply 주소
+- 사용자 문서: `docs/usage.md`, `docs/ko/사용법.md` — 화면 문구가 바뀌면 함께 고친다
 
 ## 하지 않을 것
 - AI 직접 호출, API 키 입력
