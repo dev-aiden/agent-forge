@@ -7,7 +7,7 @@
 //
 // Extra arguments (e.g. --no-sandbox on Linux CI) are passed through to the app.
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -43,6 +43,13 @@ console.log(`smoke: ${cmd} ${cmdArgs.join(" ")}`);
 // Never touch the real ~/.agent-forge: run the app against an empty temporary home.
 const home = mkdtempSync(join(tmpdir(), "agent-forge-smoke-home-"));
 const env = { ...process.env, HOME: home, USERPROFILE: home };
+if (process.platform === "win32") {
+  // Electron/Chromium on Windows needs the AppData folders under the profile.
+  env.APPDATA = join(home, "AppData", "Roaming");
+  env.LOCALAPPDATA = join(home, "AppData", "Local");
+  mkdirSync(env.APPDATA, { recursive: true });
+  mkdirSync(env.LOCALAPPDATA, { recursive: true });
+}
 process.on("exit", () => rmSync(home, { recursive: true, force: true }));
 const child = spawn(cmd, cmdArgs, { cwd: appDir, env, stdio: ["ignore", "pipe", "pipe"] });
 
