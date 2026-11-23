@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ApplySummary, ChangeSet } from "../../shared/api";
 import { PreviewDialog } from "./components/PreviewDialog";
 import { errorText } from "./format";
-import { useT } from "./i18n";
+import { useLang, useT } from "./i18n";
 
 export interface Notice {
   text: string;
@@ -13,6 +13,7 @@ export interface Notice {
 
 export function useApplyFlow(shortPath: (path: string) => string) {
   const t = useT();
+  const lang = useLang();
   const [history, setHistory] = useState<ApplySummary[]>([]);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +115,7 @@ export function useApplyFlow(shortPath: (path: string) => string) {
       <ul>
         {history.slice(0, 10).map((h) => (
           <li key={h.id} className="flex items-center gap-2 px-3 py-1.5 text-xs">
-            <span className="text-neutral-400">{new Date(h.createdAt).toLocaleString()}</span>
+            <span className="text-neutral-400">{new Date(h.createdAt).toLocaleString(lang)}</span>
             <span className="text-neutral-600">
               {h.commandCount ? t("history.summary", { files: h.fileCount, commands: h.commandCount }) : t("agents.files", { n: h.fileCount })}
             </span>

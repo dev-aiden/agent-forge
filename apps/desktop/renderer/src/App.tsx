@@ -5,7 +5,7 @@ import { ItemDetail } from "./components/ItemDetail";
 import { ItemList } from "./components/ItemList";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { errorText, makeShortPath } from "./format";
-import { I18nProvider, resolveLanguage, useT } from "./i18n";
+import { I18nProvider, resolveLanguage, useLang, useT } from "./i18n";
 import { ThemeProvider, useResolvedTheme } from "./theme";
 import { ManagedView } from "./views/ManagedView";
 import { McpView } from "./views/McpView";
@@ -41,6 +41,7 @@ export function App() {
 
 function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: AppSettings): void }) {
   const t = useT();
+  const lang = useLang();
   const [project, setProject] = useState<string | null | undefined>(undefined);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -151,7 +152,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
   }
 
   const views: View[] = ["overview", "agents", "skills", "rules", "mcp", "terminal"];
-  const timeText = overview ? new Date(overview.readAt).toLocaleTimeString() : "";
+  const timeText = overview ? new Date(overview.readAt).toLocaleTimeString(lang) : "";
 
   return (
     <div className="flex h-screen flex-col bg-neutral-950 text-sm text-neutral-200">
