@@ -155,10 +155,10 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
   return (
     <div className="flex min-h-0 flex-1">
       <aside className="flex w-[300px] shrink-0 flex-col border-r border-neutral-800">
-        <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
+        <div className="flex flex-col gap-2 border-b border-neutral-800 px-3 py-2">
           <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{t("mcp.title")}</span>
           {servers && (
-            <div className="flex gap-1">
+            <div className="flex flex-wrap gap-1">
               <button className="btn" onClick={doImport} title={t("mcp.reimport")}>
                 {t("mcp.reimport")}
               </button>

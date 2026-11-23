@@ -259,7 +259,7 @@ How it is applied:
 
 Good to know:
 - Secrets show as `••••`. **Saving without touching them keeps the original values.** Type a new value to change one.
-- If a tool has a server the app does not list, the preview warns that applying would remove it. Click `Import again`.
+- If a tool has a server the app does not list, the preview warns that applying would remove it. Click `Import` at the top left of the MCP screen.
 - For **projects**:
   - Claude Code asks for approval the first time it uses a server from `.mcp.json`.
   - Codex reads `.codex/config.toml` only in trusted projects.

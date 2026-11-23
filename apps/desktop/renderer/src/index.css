@@ -12,6 +12,7 @@
   --color-neutral-400: #bdbdbd;
   --color-neutral-500: #a6a6a6;
   --color-neutral-600: #8c8c8c;
+  --placeholder: #6e6e6e;
 }
 
 :root[data-theme="light"] {
@@ -27,6 +28,8 @@
   --color-neutral-800: #e0e0e0;
   --color-neutral-900: #f3f3f3;
   --color-neutral-950: #ffffff;
+  /* Example text in inputs must not look like a filled-in value. */
+  --placeholder: #a9a9a9;
 
   --color-red-200: #7f1d1d;
   --color-red-300: #b91c1c;
@@ -69,7 +72,7 @@
     @apply rounded-md bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-900 hover:opacity-85 disabled:opacity-40;
   }
   .input {
-    @apply w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-500;
+    @apply w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-(--placeholder) focus:border-neutral-500;
   }
   .btn {
     @apply rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 hover:bg-neutral-800 disabled:opacity-50;

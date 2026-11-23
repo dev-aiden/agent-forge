@@ -7,7 +7,8 @@
 //
 // Extra arguments (e.g. --no-sandbox on Linux CI) are passed through to the app.
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,7 +40,11 @@ const [cmd, cmdArgs] = packaged
   : [createRequire(import.meta.url)("electron"), [appDir, "--smoke-test", ...passthrough]];
 
 console.log(`smoke: ${cmd} ${cmdArgs.join(" ")}`);
-const child = spawn(cmd, cmdArgs, { cwd: appDir, stdio: ["ignore", "pipe", "pipe"] });
+// Never touch the real ~/.agent-forge: run the app against an empty temporary home.
+const home = mkdtempSync(join(tmpdir(), "agent-forge-smoke-home-"));
+const env = { ...process.env, HOME: home, USERPROFILE: home };
+process.on("exit", () => rmSync(home, { recursive: true, force: true }));
+const child = spawn(cmd, cmdArgs, { cwd: appDir, env, stdio: ["ignore", "pipe", "pipe"] });
 
 let output = "";
 child.stdout.on("data", (d) => (output += d));
