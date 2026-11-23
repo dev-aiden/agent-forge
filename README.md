@@ -1,3 +1,5 @@
+<img src="apps/desktop/build/icon.png" alt="" width="96" align="left">
+
 # Agent Forge
 
 **One place to manage agents, skills, rules and MCP servers for your AI coding CLIs.**
