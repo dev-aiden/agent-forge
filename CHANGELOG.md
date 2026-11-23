@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.2]
+
+### Added
+- Install and update on macOS with Homebrew: `brew install --cask dev-aiden/tap/kitroom`.
+- Copilot CLI: personal instructions (`~/.copilot/instructions/`), project `.mcp.json` and `.github/copilot/settings.local.json`.
+- Antigravity CLI: all four global rule files (`GEMINI.md` / `AGENTS.md` in `~/.gemini` and `~/.gemini/config`), skills in `~/.gemini/config/skills` and `~/.gemini/skills`, project `.agents/AGENTS.md` / `.agents/GEMINI.md`, and the CLI settings file.
+
+### Changed
+- Copilot CLI, Antigravity CLI and Codex agent locations are now checked against each tool's official docs, so the "unverified path" badge is gone.
+- Never read: Copilot `providers.json` (stores API keys in plain text) and Antigravity `mcp_oauth_tokens.json`.
+
 ## [0.1.1]
 
 ### Changed

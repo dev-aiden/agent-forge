@@ -1,7 +1,7 @@
 {
   "name": "@kitroom/desktop",
   "productName": "Kitroom",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "license": "MIT",
   "description": "Configure and run your AI coding CLIs from one window.",
