@@ -186,6 +186,7 @@ The **Apply to** bar above Agents, Skills, Rules and MCP chooses the target.
 > - Right after importing, `Preview & apply` should say "Everything is already up to date". If it shows changes, please [open an issue](https://github.com/dev-aiden/agent-forge/issues).
 > - Settings the form does not show (Claude Code `color`, `permissionMode`; Codex `model`, `sandbox_mode`, …) appear under "Other settings" and are kept when you save.
 > - If both tools have the same name with different content, Claude Code's version is imported and you are told.
+> - Agents whose file name differs from their `name` are not imported (applying would create a duplicate). Rename the file to match, then import again.
 
 1. Click `New` (or pick from `Templates`).
 2. Fill in:
@@ -218,6 +219,8 @@ Same as agents; the body goes into the `SKILL.md` field.
 
 `Import` also brings in existing skills with their other files (`scripts/`, …), which are kept as they are. These are skipped, with the reason shown:
 - skills containing non-text files such as images;
+- skills whose folder name differs from their `name` (applying would create a duplicate);
+- skills with settings Agent Forge cannot keep yet (e.g. `license` on a Codex skill, unknown frontmatter keys);
 - skills containing symbolic links, or more than 200 files / 20 MB;
 - Codex skills with UI settings (`agents/openai.yaml`);
 - skills in the old location `~/.codex/skills`;

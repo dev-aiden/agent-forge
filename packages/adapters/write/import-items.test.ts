@@ -144,3 +144,26 @@ test("sameMarkdown ignores key order and quoting only", async () => {
   assert.ok(!sameMarkdown("---\na: 1\n---\nBody\n", "---\na: 1\n---\nOther\n"));
   assert.ok(!sameMarkdown("# no frontmatter\n", "# no frontmatter\n\n"));
 });
+
+test("keeps an explicitly empty tools list and YAML block styles stay unchanged", async () => {
+  await put(
+    join(home, ".claude/agents/fw.md"),
+    "---\nname: fw\ndescription: >\n  Firmware expert for a\n  long description\nmodel: inherit\ntools: []\n---\n\n# Firmware\n",
+  );
+  await importAgents(ctx);
+  assert.deepEqual((await listAgents(ctx))[0]!.claudeExtra, { tools: [] });
+  assert.deepEqual(await changed(), []);
+});
+
+test("skips items that would be duplicated or lose fields", async () => {
+  await put(join(home, ".claude/agents/short.md"), "---\nname: long-name\ndescription: d\n---\nx\n");
+  await put(join(home, ".claude/skills/tagged/SKILL.md"), "---\nname: tagged\ndescription: d\nversion: 2\n---\nx\n");
+  await put(join(home, ".agents/skills/lic/SKILL.md"), "---\nname: lic\ndescription: d\nlicense: MIT\n---\nx\n");
+  await put(join(home, ".claude/skills/dir/SKILL.md"), "---\nname: other\ndescription: d\n---\nx\n");
+  assert.deepEqual((await importAgents(ctx)).skipped, [{ name: "long-name", reason: "file-name-differs" }]);
+  assert.deepEqual((await importSkills(ctx)).skipped, [
+    { name: "lic", reason: "unsupported-fields" },
+    { name: "other", reason: "file-name-differs" },
+    { name: "tagged", reason: "unsupported-fields" },
+  ]);
+});

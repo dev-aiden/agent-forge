@@ -45,14 +45,23 @@ import {
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 
+function trimStrings(v: unknown): unknown {
+  if (typeof v === "string") return v.trimEnd();
+  if (Array.isArray(v)) return v.map(trimStrings);
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, trimStrings(x)]));
+  return v;
+}
+
 /** True if two Markdown files have equal frontmatter data and the same body. */
 export function sameMarkdown(a: string, b: string): boolean {
   const ma = FRONTMATTER.exec(a);
   const mb = FRONTMATTER.exec(b);
   if (!ma || !mb) return false;
-  if (ma[2]!.replace(/\r\n/g, "\n").trimEnd() !== mb[2]!.replace(/\r\n/g, "\n").trimEnd()) return false;
+  // Blank lines around the body and YAML block styles (`>` vs `>-`) do not change meaning.
+  const body = (x: string) => x.replace(/\r\n/g, "\n").replace(/^\n+/, "").trimEnd();
+  if (body(ma[2]!) !== body(mb[2]!)) return false;
   try {
-    return isDeepStrictEqual(parseYaml(ma[1]!), parseYaml(mb[1]!));
+    return isDeepStrictEqual(trimStrings(parseYaml(ma[1]!)), trimStrings(parseYaml(mb[1]!)));
   } catch {
     return false;
   }

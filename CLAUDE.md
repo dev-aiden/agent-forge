@@ -55,7 +55,9 @@
 ### 가져오기와 보존
 - 처음에 기존 설정을 가져와 합친다: `importAgents`/`importSkills`/`importRule`/`importMcp` (`write/import.ts`). 가져온 직후 적용은 "이미 최신"이어야 한다 — 테스트로 확인
 - 화면에 없는 필드는 읽기 전용으로 보존: 에이전트 `claudeExtra`·`codexExtra`, 스킬 `extra`(rulesync 형식: 최상위 키 + `claudecode` 섹션)와 묶음 파일, MCP `codexExtra`. 렌더러는 이 값을 보내지 않고, 저장할 때 저장된 값을 유지한다
-- 가져오지 않는 스킬: 바이너리·링크·200개/20MB 초과, Codex `agents/openai.yaml`, 옛 위치 `~/.codex/skills`, claude.ai 동기화 스킬
+- 가져오지 않는 것: 파일·폴더 이름과 `name`이 다른 에이전트·스킬(중복 생성), rulesync가 다시 쓰지 못하는 frontmatter가 있는 스킬(`SKILL_KEYS`, 예: Codex 스킬의 `license`), 바이너리·링크·200개/20MB 초과, Codex `agents/openai.yaml`, 옛 위치 `~/.codex/skills`, claude.ai 동기화 스킬
+- 실제 공개 모음(anthropics/skills, wshobson/agents, VoltAgent 서브에이전트 400여 개)으로 가져오기 → 미리보기가 전부 `unchanged`인 것을 확인함. 가져오기 규칙을 바꾸면 같은 방식으로 다시 확인할 것
+- 명시적인 빈 `tools: []`(도구 없음)는 생략(모든 도구)과 다르므로 `claudeExtra`로 보존
 - 같은 이름이 두 도구에서 다르면 Claude Code 쪽을 가져오고 알린다
 
 ### 비밀값

@@ -243,7 +243,8 @@ export async function readMarkdownAgents(reader: Reader, dir: string, base: Sour
       body,
       model: str(data.model),
       tools: stringList(data.tools),
-      extra: omit(data, ["name", "description", "model", "tools"]),
+      // An explicit empty `tools` (no tools) differs from a missing one (all tools): keep it as-is.
+      extra: omit(data, stringList(data.tools) === undefined && data.tools !== undefined ? ["name", "description", "model"] : ["name", "description", "model", "tools"]),
       source: src,
     });
   }

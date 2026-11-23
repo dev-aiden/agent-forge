@@ -91,6 +91,8 @@ export function toRulesyncAgent(agent: ManagedAgent): string {
 function fromRulesyncAgent(reader: Reader, path: string, text: string): ManagedAgent {
   const { data, body } = splitFrontmatter(reader, path, text);
   const { model, tools, ...claudeExtra } = (data.claudecode ?? {}) as Record<string, unknown>;
+  // Explicitly empty tools ("no tools") cannot be shown in the form; keep it as an extra.
+  if (tools !== undefined && stringList(tools) === undefined) claudeExtra.tools = tools;
   const codexExtra = (data.codexcli ?? {}) as Record<string, unknown>;
   const targets = (stringList(data.targets) ?? [])
     .map((t) => RULESYNC_TO_TOOL[t])

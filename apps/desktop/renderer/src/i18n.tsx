@@ -167,6 +167,8 @@ const en = {
   "import.reason.symlink": "contains links",
   "import.reason.legacy-location": "old location ~/.codex/skills",
   "import.reason.binary-file": "contains non-text files (images, ...)",
+  "import.reason.file-name-differs": "file name differs from its name",
+  "import.reason.unsupported-fields": "has settings Agent Forge cannot keep yet",
   "import.extras": "Other settings (kept as they are, not editable here)",
   "import.files": "Bundled files (kept as they are)",
 
@@ -431,6 +433,8 @@ const ko: Messages = {
   "import.reason.symlink": "링크 파일 포함",
   "import.reason.legacy-location": "옛 위치 ~/.codex/skills",
   "import.reason.binary-file": "이미지 등 텍스트가 아닌 파일 포함",
+  "import.reason.file-name-differs": "파일 이름과 name이 다름",
+  "import.reason.unsupported-fields": "아직 그대로 유지할 수 없는 설정 포함",
   "import.extras": "그 밖의 설정 (그대로 유지, 여기서는 수정 불가)",
   "import.files": "함께 들어 있는 파일 (그대로 유지)",
 
