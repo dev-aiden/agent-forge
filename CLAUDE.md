@@ -81,6 +81,7 @@
 - 로그인 셸의 PATH를 가져와 CLI를 찾는다
 - CI(`.github/workflows/desktop.yml`): macOS·Windows·Linux 패키지 앱 스모크 테스트(rulesync 워커와 pty 실행까지). Intel Mac은 Rosetta로 참고용 확인
 - 아직 코드 서명 없음
+- Homebrew: 별도 저장소 `dev-aiden/homebrew-tap`의 `Casks/kitroom.rb`. 그 저장소의 워크플로가 6시간마다 최신 릴리스의 `SHA256SUMS.txt`를 읽어 버전·체크섬을 갱신한다 (이 저장소에 토큰 불필요). 최소 macOS는 앱과 같은 Ventura
 
 ### 확인 필요
 - Copilot·Antigravity 경로와 Codex 에이전트 폴더는 공식 문서로 확인했다(2026-11). 실제 설치로는 써 보지 않았다. 공식 문서에 없는 경로는 `paths.ts`에 "unverified path"를 달고 `verified: false`로 읽는다(화면에 `미확인 경로` 배지)

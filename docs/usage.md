@@ -59,6 +59,17 @@ Download the file for your OS from [GitHub Releases](https://github.com/dev-aide
 
 ### macOS
 
+**With Homebrew** (installs and updates in one command):
+
+```bash
+brew install --cask dev-aiden/tap/kitroom   # install
+brew upgrade --cask kitroom                 # update later
+```
+
+The warning in step 2 below can still appear, because the app is not code-signed yet.
+
+**Without Homebrew:**
+
 1. Open the `.dmg` and drag **Kitroom** into `Applications`.
 2. If macOS says the app **"is damaged and can't be opened"** or comes from an **unidentified developer**, run this once in Terminal:
    ```bash
@@ -344,7 +355,7 @@ If the app will not open:
 
 ## 9. Known limitations
 
-- Not code-signed yet, so the OS warns on install (section 2). To update, download the new version when the banner tells you.
+- Not code-signed yet, so the OS warns on install (section 2). To update, download the new version when the banner tells you (or run `brew upgrade --cask kitroom`).
 - Copilot CLI and Antigravity CLI are **view only**. Their file locations follow the official docs but have not been tried on a real install.
 - Claude Code's `local` MCP scope (one project, not shared) is not supported yet.
 - Skills containing non-text files (images, …) are not imported.

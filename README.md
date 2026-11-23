@@ -26,7 +26,13 @@ Kitroom never calls an AI API. Each official CLI keeps running on your own subsc
 
 ## Install
 
-Download the latest release for your OS from **[Releases](https://github.com/dev-aiden/kitroom/releases/latest)**:
+On macOS with [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask dev-aiden/tap/kitroom
+```
+
+Or download the latest release for your OS from **[Releases](https://github.com/dev-aiden/kitroom/releases/latest)**:
 
 | OS | File |
 |---|---|
