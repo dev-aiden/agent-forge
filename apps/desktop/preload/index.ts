@@ -47,6 +47,7 @@ const api: AgentForgeApi = {
   setWriteScope: (scope) => ipcRenderer.invoke(IPC.setWriteScope, scope),
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   saveSettings: (settings) => ipcRenderer.invoke(IPC.saveSettings, settings),
+  checkForUpdate: () => ipcRenderer.invoke(IPC.checkForUpdate),
   termSpawn: (target, cols, rows) => ipcRenderer.invoke(IPC.termSpawn, target, cols, rows),
   termWrite: (id, data) => ipcRenderer.send(IPC.termWrite, id, data),
   termResize: (id, cols, rows) => ipcRenderer.send(IPC.termResize, id, cols, rows),

@@ -38,6 +38,15 @@ export type Theme = "system" | "light" | "dark";
 
 export const TERMINAL_FONT_SIZE = { min: 9, max: 28, default: 13 } as const;
 
+/** GitHub repository whose published releases the update check looks at. */
+export const RELEASES_REPO = "dev-aiden/agent-forge";
+
+/** A newer release than the running app. */
+export interface UpdateInfo {
+  version: string;
+  url: string;
+}
+
 export interface AppSettings {
   language: Language;
   theme: Theme;
@@ -45,6 +54,8 @@ export interface AppSettings {
   terminalFontSize: number;
   /** Tools hidden everywhere in the app (overview, terminal). */
   disabledTools: ToolId[];
+  /** Ask GitHub for a newer release on launch. */
+  checkUpdates: boolean;
 }
 
 /** What a terminal tab runs: an official CLI found on PATH, or the user's shell. */
@@ -131,6 +142,8 @@ export interface AgentForgeApi {
   setWriteScope(scope: WriteScope): Promise<WriteScope>;
   getSettings(): Promise<AppSettings>;
   saveSettings(settings: AppSettings): Promise<AppSettings>;
+  /** Newer published release, or null. Only asks GitHub when the setting is on. */
+  checkForUpdate(): Promise<UpdateInfo | null>;
 
   // Terminal tabs (official CLIs in a pseudo-terminal).
   termSpawn(target: LaunchTarget, cols: number, rows: number): Promise<TerminalSession>;
@@ -177,6 +190,7 @@ export const IPC = {
   history: "forge:history",
   getSettings: "settings:get",
   saveSettings: "settings:save",
+  checkForUpdate: "app:check-update",
   setWriteScope: "forge:set-write-scope",
   termSpawn: "term:spawn",
   termWrite: "term:write",

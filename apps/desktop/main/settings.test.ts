@@ -11,7 +11,10 @@ test("sanitizeSettings keeps only known values", () => {
     theme: "light",
     terminalFontSize: 16,
     disabledTools: ["codex"],
+    checkUpdates: true,
   });
+  assert.equal(sanitizeSettings({ checkUpdates: false }).checkUpdates, false);
+  assert.equal(sanitizeSettings({ checkUpdates: "no" }).checkUpdates, true);
   assert.deepEqual(sanitizeSettings({ theme: "pink", terminalFontSize: 400 }), DEFAULT_SETTINGS);
   assert.deepEqual(sanitizeSettings({ terminalFontSize: 12.5 }), DEFAULT_SETTINGS);
   assert.deepEqual(sanitizeSettings({ language: "fr" }), DEFAULT_SETTINGS);

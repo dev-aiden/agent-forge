@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: "system",
   terminalFontSize: TERMINAL_FONT_SIZE.default,
   disabledTools: [],
+  checkUpdates: true,
 };
 
 const LANGUAGES: readonly Language[] = ["system", "en", "ko"];
@@ -31,7 +32,8 @@ export function sanitizeSettings(input: unknown): AppSettings {
   const terminalFontSize = Number.isInteger(size) && size >= TERMINAL_FONT_SIZE.min && size <= TERMINAL_FONT_SIZE.max
     ? size
     : DEFAULT_SETTINGS.terminalFontSize;
-  return { language, theme, terminalFontSize, disabledTools };
+  const checkUpdates = typeof s.checkUpdates === "boolean" ? s.checkUpdates : DEFAULT_SETTINGS.checkUpdates;
+  return { language, theme, terminalFontSize, disabledTools, checkUpdates };
 }
 
 export async function readSettings(ctx: PathContext): Promise<AppSettings> {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Item } from "@agent-forge/model";
-import type { AppSettings, Overview, WriteScope } from "../../shared/api";
+import type { AppSettings, Overview, UpdateInfo, WriteScope } from "../../shared/api";
 import { ItemDetail } from "./components/ItemDetail";
 import { ItemList } from "./components/ItemList";
 import { SettingsDialog } from "./components/SettingsDialog";
@@ -18,7 +18,7 @@ export function App() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
 
   useEffect(() => {
-    window.agentForge.getSettings().then(setSettings, () => setSettings({ language: "system", theme: "system", terminalFontSize: 13, disabledTools: [] }));
+    window.agentForge.getSettings().then(setSettings, () => setSettings({ language: "system", theme: "system", terminalFontSize: 13, disabledTools: [], checkUpdates: true }));
   }, []);
 
   const theme = useResolvedTheme(settings?.theme ?? "system");
@@ -50,6 +50,17 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
   const [autoUpdatedAt, setAutoUpdatedAt] = useState<string | null>(null);
   const [view, setView] = useState<View>("overview");
   const [showSettings, setShowSettings] = useState(false);
+  const [update, setUpdate] = useState<UpdateInfo | null>(null);
+
+  // Once per launch, and when the setting is turned on.
+  useEffect(() => {
+    if (!settings.checkUpdates) return;
+    let live = true;
+    window.agentForge.checkForUpdate().then((u) => live && setUpdate(u), () => {});
+    return () => {
+      live = false;
+    };
+  }, [settings.checkUpdates]);
   /** Where managed items are written; confirmed by the main process before views load. */
   const [scope, setScope] = useState<WriteScope>("global");
   const notified = useRef(false);
@@ -188,6 +199,17 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
         </div>
       </header>
 
+      {update && (
+        <div className="flex items-center gap-3 border-b border-sky-800 bg-sky-950/40 px-4 py-2 text-xs text-sky-300">
+          <span>{t("update.available", { version: update.version })}</span>
+          <button className="hover:underline" onClick={() => window.agentForge.openExternal(update.url)}>
+            {t("update.open")}
+          </button>
+          <button className="ml-auto text-neutral-500 hover:text-neutral-300" onClick={() => setUpdate(null)}>
+            {t("action.dismiss")}
+          </button>
+        </div>
+      )}
       {error && <div className="border-b border-red-900 bg-red-950/50 px-4 py-2 text-xs text-red-300">{error}</div>}
 
       {(view === "agents" || view === "skills" || view === "rules" || view === "mcp") && (

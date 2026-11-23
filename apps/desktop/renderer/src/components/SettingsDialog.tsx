@@ -106,6 +106,14 @@ export function SettingsDialog({ settings, tools, onChange, onClose }: Props) {
           </ul>
         </section>
 
+        <section className="space-y-1.5 border-t border-neutral-800 px-5 py-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={settings.checkUpdates} onChange={(e) => onChange({ ...settings, checkUpdates: e.target.checked })} />
+            {t("settings.checkUpdates")}
+          </label>
+          <p className="text-xs text-neutral-500">{t("settings.checkUpdatesHint")}</p>
+        </section>
+
         <footer className="border-t border-neutral-800 px-5 py-3 text-xs text-neutral-600">{t("settings.storage")}</footer>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { homedir } from "node:os";
 import { buildOverview, overviewFingerprint, validateProject } from "./overview";
 import { ConfigWatcher, watchedPaths } from "./watch";
 import { registerForgeIpc, smokeCheckWorker } from "./forge";
+import { checkForUpdate } from "./update";
 import { readSettings, writeSettings } from "./settings";
 import { cliEnv } from "./shell-env";
 import { killAllSessions, registerTerminalIpc, smokeCheckPty } from "./terminal";
@@ -179,6 +180,13 @@ ipcMain.handle(IPC.getSettings, (event) => {
 ipcMain.handle(IPC.saveSettings, (event, settings: unknown) => {
   if (!trusted(event)) throw new Error("untrusted sender");
   return writeSettings(settingsCtx(), settings).then(applyTheme);
+});
+
+ipcMain.handle(IPC.checkForUpdate, async (event) => {
+  if (!trusted(event)) throw new Error("untrusted sender");
+  // No network during smoke tests; respect the setting even if the renderer asks.
+  if (SMOKE || !(await readSettings(settingsCtx())).checkUpdates) return null;
+  return checkForUpdate(app.getVersion());
 });
 
 ipcMain.on(IPC.rendererReady, (event, error: unknown) => {

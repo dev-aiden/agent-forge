@@ -145,6 +145,12 @@ const en = {
   "rules.unmanage": "Stop managing",
   "rules.unmanageConfirm": "Stop managing these rules? Your tool files stay as they are.",
 
+  // update check
+  "update.available": "Agent Forge {version} is available.",
+  "update.open": "Open download page",
+  "settings.checkUpdates": "Check for new versions on launch",
+  "settings.checkUpdatesHint": "Asks GitHub for the latest release of Agent Forge. Nothing else is sent. Updates are never installed automatically.",
+
   // import existing agents / skills
   "import.button": "Import",
   "import.tip": "Bring in what Claude Code and Codex already have, so Agent Forge can manage it",
@@ -402,6 +408,12 @@ const ko: Messages = {
   "rules.saved": "저장했습니다. 도구에 쓰려면 \"미리보기 후 적용\"을 누르세요.",
   "rules.unmanage": "관리 중단",
   "rules.unmanageConfirm": "규칙 관리를 중단할까요? 도구 파일은 그대로 남습니다.",
+
+  // update check
+  "update.available": "Agent Forge 새 버전 {version}이(가) 나왔습니다.",
+  "update.open": "다운로드 페이지 열기",
+  "settings.checkUpdates": "시작할 때 새 버전 확인",
+  "settings.checkUpdatesHint": "GitHub에 Agent Forge 최신 릴리스만 물어봅니다. 다른 정보는 보내지 않고, 자동으로 설치하지도 않습니다.",
 
   // import existing agents / skills
   "import.button": "가져오기",
