@@ -158,7 +158,7 @@ The **Apply to** bar above Agents, Skills, Rules and MCP chooses the target.
 - Click an item to see its content and file location.
 - Badges:
   - `global` / `project` / `local` — the scope of the setting;
-  - `unverified path` — a location known from documentation but not yet confirmed on a real install (all of Copilot and Antigravity, Codex agents folder);
+  - `unverified path` — a location not confirmed by the tool's official documentation (none at the moment);
   - `claude.ai` — skills synced from claude.ai (never touched by the app).
 - Type in the filter box to search by name or description.
 
@@ -303,8 +303,8 @@ Shortcuts (⌘ on macOS, Ctrl on Windows/Linux):
 |---|---|---|
 | Claude Code | ✅ | ✅ Agents, skills, rules, MCP (global and project) |
 | Codex CLI | ✅ | ✅ Agents, skills, rules, MCP (global and project) |
-| Copilot CLI | ✅ (unverified paths) | ❌ |
-| Antigravity CLI | ✅ (unverified paths) | ❌ |
+| Copilot CLI | ✅ | ❌ |
+| Antigravity CLI | ✅ | ❌ |
 
 ---
 
@@ -345,7 +345,7 @@ If the app will not open:
 ## 9. Known limitations
 
 - Not code-signed yet, so the OS warns on install (section 2). To update, download the new version when the banner tells you.
-- Copilot CLI and Antigravity CLI are **view only**, and their file locations are not yet confirmed on real installs (`unverified path` badge).
+- Copilot CLI and Antigravity CLI are **view only**. Their file locations follow the official docs but have not been tried on a real install.
 - Claude Code's `local` MCP scope (one project, not shared) is not supported yet.
 - Skills containing non-text files (images, …) are not imported.
 

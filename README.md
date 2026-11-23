@@ -51,8 +51,8 @@ Full guide: **[English](docs/usage.md)** · **[한국어](docs/ko/사용법.md)*
 |---|---|---|
 | Claude Code | ✅ | ✅ agents, skills, rules, MCP |
 | Codex CLI | ✅ | ✅ agents, skills, rules, MCP |
-| GitHub Copilot CLI | ✅ (paths unverified) | — |
-| Antigravity CLI | ✅ (paths unverified) | — |
+| GitHub Copilot CLI | ✅ | — |
+| Antigravity CLI | ✅ | — |
 
 ## Privacy and safety
 

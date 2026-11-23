@@ -20,6 +20,8 @@ before(async () => {
   project = join(root, "project");
   const c = join(home, ".copilot");
   await put(join(c, "copilot-instructions.md"), "# Global\n");
+  await put(join(c, "instructions", "style.instructions.md"), "Be tidy.\n");
+  await put(join(c, "providers.json"), JSON.stringify({ providers: [{ apiKey: "sk-plain" }] }));
   await put(join(c, "agents", "reviewer.agent.md"), "---\ndescription: Reviews code\ntools: [read, search]\n---\nReview.\n");
   await put(join(c, "skills", "pdf", "SKILL.md"), "---\nname: pdf\ndescription: PDFs\n---\nx\n");
   await put(join(c, "mcp-config.json"), JSON.stringify({ mcpServers: { github: { type: "local", command: "gh-mcp", env: { TOKEN: "secret" } }, web: { type: "http", url: "https://x.invalid/mcp" } } }));
@@ -40,9 +42,10 @@ after(() => rm(root, { recursive: true, force: true }));
 test("copilot: rules from global, project and .github/instructions", () => {
   assert.deepEqual(
     config.rules.map((r) => [r.source.scope, r.name]),
-    [["global", "copilot-instructions.md"], ["project", "copilot-instructions.md"], ["project", "AGENTS.md"], ["project", "tests"]],
+    [["global", "copilot-instructions.md"], ["project", "copilot-instructions.md"], ["project", "AGENTS.md"], ["global", "style"], ["project", "tests"]],
   );
-  assert.ok(config.rules.every((r) => r.source.verified === false));
+  assert.ok(config.rules.every((r) => r.source.verified));
+  assert.ok(!JSON.stringify(config).includes("sk-plain"));
 });
 
 test("copilot: .agent.md agents, skills and both MCP key styles", () => {

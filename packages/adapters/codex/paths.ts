@@ -14,7 +14,7 @@ export function codexPaths(ctx: PathContext) {
     global: {
       rulesFile: join(g, "AGENTS.md"),
       overrideRulesFile: join(g, "AGENTS.override.md"),
-      /** Unverified: not documented by rulesync or Codex docs we checked. */
+      /** One TOML file per agent (developers.openai.com/codex/subagents). */
       agentsDir: join(g, "agents"),
       skillsDir: join(ctx.home, ".agents", "skills"),
       legacySkillsDir: join(g, "skills"),
@@ -26,7 +26,7 @@ export function codexPaths(ctx: PathContext) {
     project: {
       rulesFile: join(p, "AGENTS.md"),
       overrideRulesFile: join(p, "AGENTS.override.md"),
-      /** Unverified, see global.agentsDir. */
+      /** Project-scoped agents, see global.agentsDir. */
       agentsDir: join(p, ".codex", "agents"),
       skillsDir: join(p, ".agents", "skills"),
       config: join(p, ".codex", "config.toml"),
@@ -41,7 +41,7 @@ function candidates(ctx: PathContext): Candidate[] {
     // global
     { kind: "rules", scope: "global", path: g.rulesFile, type: "file", format: "markdown" },
     { kind: "rules", scope: "global", path: g.overrideRulesFile, type: "file", format: "markdown" },
-    { kind: "agents", scope: "global", path: g.agentsDir, type: "dir", format: "toml", count: "toml", note: "unverified path" },
+    { kind: "agents", scope: "global", path: g.agentsDir, type: "dir", format: "toml", count: "toml" },
     { kind: "skills", scope: "global", path: g.skillsDir, type: "dir", format: "markdown", count: "skill", note: "shared .agents tree" },
     { kind: "skills", scope: "global", path: g.legacySkillsDir, type: "dir", format: "markdown", count: "skill", note: "legacy location" },
     { kind: "commands", scope: "global", path: g.promptsDir, type: "dir", format: "markdown", count: "md", note: "custom prompts (deprecated upstream)" },
@@ -51,7 +51,7 @@ function candidates(ctx: PathContext): Candidate[] {
     // project
     { kind: "rules", scope: "project", path: p.rulesFile, type: "file", format: "markdown", note: "shared with copilot, antigravity" },
     { kind: "rules", scope: "project", path: p.overrideRulesFile, type: "file", format: "markdown" },
-    { kind: "agents", scope: "project", path: p.agentsDir, type: "dir", format: "toml", count: "toml", note: "unverified path" },
+    { kind: "agents", scope: "project", path: p.agentsDir, type: "dir", format: "toml", count: "toml" },
     { kind: "skills", scope: "project", path: p.skillsDir, type: "dir", format: "markdown", count: "skill", note: "shared .agents tree" },
     { kind: "mcp", scope: "project", path: p.config, type: "file", format: "toml", extract: { type: "mcp-toml" } },
     { kind: "hooks", scope: "project", path: p.hooks, type: "file", format: "json", extract: { type: "top-keys" } },

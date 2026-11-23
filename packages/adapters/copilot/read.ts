@@ -1,11 +1,11 @@
 // Reads GitHub Copilot CLI rules, agents, skills and MCP servers into the common model. Read-only.
-// Paths are documented but unverified on a real install, so every item is marked unverified.
+// Paths follow the official docs (see paths.ts).
 import type { Agent, McpServer, Rule, Source, ToolConfig } from "@kitroom/model";
 import type { PathContext } from "../types";
 import { byName, mcpFromJson, readMarkdownAgents, readRootRule, readRulesDir, readSkillsDir, Reader, source } from "../shared/read-utils";
 import { copilotPaths } from "./paths";
 
-const md = { tool: "copilot", format: "markdown", verified: false } as const;
+const md = { tool: "copilot", format: "markdown", verified: true } as const;
 
 /** `mcpServers` (Copilot CLI) or `servers` (VS Code style). */
 function serversFrom(data: Record<string, unknown> | undefined, src: Source): McpServer[] {
@@ -33,6 +33,9 @@ export async function readCopilot(ctx: PathContext): Promise<ToolConfig> {
       hasProject ? readRootRule(r, p.agentsFile, { ...md, scope: "project" }) : null,
     ])
   ).filter((x): x is Rule => x !== null);
+  // ~/.copilot/instructions/**/*.instructions.md
+  const personal = await readRulesDir(r, g.instructionsDir, { ...md, scope: "global" });
+  rules.push(...personal.map((rule) => ({ ...rule, name: rule.name.replace(/\.instructions$/, "") })));
   if (hasProject) {
     // .github/instructions/*.instructions.md, scoped with `applyTo` globs.
     const scoped = await readRulesDir(r, p.instructionsDir, { ...md, scope: "project" });
@@ -46,9 +49,9 @@ export async function readCopilot(ctx: PathContext): Promise<ToolConfig> {
   ];
 
   const mcpServers = [
-    ...serversFrom((await r.json(g.mcpConfig)) as Record<string, unknown> | undefined, source("copilot", "global", g.mcpConfig, "json", false)),
+    ...serversFrom((await r.json(g.mcpConfig)) as Record<string, unknown> | undefined, source("copilot", "global", g.mcpConfig, "json")),
     ...(hasProject
-      ? serversFrom((await r.json(p.mcpConfig)) as Record<string, unknown> | undefined, source("copilot", "project", p.mcpConfig, "json", false))
+      ? serversFrom((await r.json(p.mcpConfig)) as Record<string, unknown> | undefined, source("copilot", "project", p.mcpConfig, "json"))
       : []),
   ];
 

@@ -45,13 +45,13 @@ function serversFromToml(config: Record<string, unknown> | undefined, src: Sourc
   });
 }
 
-/** Custom agents as TOML files. Location and schema are unverified, so read leniently. */
+/** Custom agents as TOML files (one per agent). Older key names are accepted too. */
 async function readTomlAgents(r: Reader, dir: string, scope: "global" | "project"): Promise<Agent[]> {
   const agents: Agent[] = [];
   for (const path of await r.filesWithSuffix(dir, ".toml")) {
     const data = await r.toml(path);
     if (!data) continue;
-    const src = source("codex", scope, path, "toml", false);
+    const src = source("codex", scope, path, "toml");
     agents.push({
       kind: "agent",
       id: itemId(src),

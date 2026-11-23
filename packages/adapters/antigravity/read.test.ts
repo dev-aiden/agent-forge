@@ -20,13 +20,18 @@ before(async () => {
   project = join(root, "project");
   const g = join(home, ".gemini");
   await put(join(g, "GEMINI.md"), "# Global\n");
+  await put(join(g, "config", "AGENTS.md"), "# Global agents\n");
   await put(join(g, "config", "rules", "style.md"), "---\ndescription: Style\n---\nBe tidy.\n");
   await put(join(g, "config", "agents", "planner.md"), "---\nname: planner\ndescription: Plans\n---\nPlan.\n");
   await put(join(g, "antigravity-cli", "skills", "deploy", "SKILL.md"), "---\nname: deploy\ndescription: Deploys\n---\nx\n");
+  await put(join(g, "config", "skills", "shared", "SKILL.md"), "---\nname: shared\ndescription: App and CLI\n---\nx\n");
+  await put(join(g, "skills", "legacy", "SKILL.md"), "---\nname: legacy\ndescription: Gemini CLI folder\n---\nx\n");
+  await put(join(g, "antigravity", "mcp_oauth_tokens.json"), JSON.stringify({ access_token: "y" }));
   await put(join(g, "config", "mcp_config.json"), JSON.stringify({ mcpServers: { remote: { serverUrl: "https://x.invalid/mcp", headers: { Authorization: "Bearer s" } }, off: { command: "x", disabled: true } } }));
   await put(join(g, "oauth_creds.json"), JSON.stringify({ access_token: "x" }));
 
   await put(join(project, "GEMINI.md"), "# Project\n");
+  await put(join(project, ".agents", "AGENTS.md"), "# Nested\n");
   await put(join(project, ".agents", "rules", "api.md"), "API rules\n");
   await put(join(project, ".agents", "skills", "lint", "SKILL.md"), "---\nname: lint\n---\nx\n");
   await put(join(project, ".agents", "mcp_config.json"), JSON.stringify({ mcpServers: { db: { command: "db-mcp" } } }));
@@ -39,20 +44,21 @@ after(() => rm(root, { recursive: true, force: true }));
 test("antigravity: rules from GEMINI.md and rule folders", () => {
   assert.deepEqual(
     config.rules.map((r) => [r.source.scope, r.name]),
-    [["global", "GEMINI.md"], ["project", "GEMINI.md"], ["global", "style"], ["project", "api"]],
+    [["global", "GEMINI.md"], ["global", "AGENTS.md"], ["project", "GEMINI.md"], ["project", "AGENTS.md"], ["global", "style"], ["project", "api"]],
   );
 });
 
 test("antigravity: agents, skills and MCP (serverUrl, disabled)", () => {
   assert.deepEqual(config.agents.map((a) => a.name), ["planner"]);
-  assert.deepEqual(config.skills.map((s) => [s.name, s.source.scope]), [["deploy", "global"], ["lint", "project"]]);
+  assert.deepEqual(config.skills.map((s) => [s.name, s.source.scope]), [["deploy", "global"], ["legacy", "global"], ["lint", "project"], ["shared", "global"]]);
   const remote = config.mcpServers.find((s) => s.name === "remote");
   assert.equal(remote?.transport, "http");
   assert.equal(remote?.url, "https://x.invalid/mcp");
   assert.equal(config.mcpServers.find((s) => s.name === "off")?.enabled, false);
-  assert.ok(config.mcpServers.every((s) => s.source.verified === false));
+  assert.ok([...config.rules, ...config.agents, ...config.skills, ...config.mcpServers].every((s) => s.source.verified));
 });
 
 test("antigravity: oauth file is never read", () => {
   assert.ok(!JSON.stringify(config).includes("access_token"));
+  assert.ok(!JSON.stringify(config).includes("mcp_oauth_tokens"));
 });

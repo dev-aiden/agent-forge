@@ -1,11 +1,11 @@
 // Reads Google Antigravity CLI rules, agents, skills and MCP servers into the common model. Read-only.
-// Paths are documented but unverified on a real install, so every item is marked unverified.
+// Paths follow the official docs (see paths.ts).
 import type { McpServer, Rule, Source, ToolConfig } from "@kitroom/model";
 import type { PathContext } from "../types";
 import { byName, mcpFromJson, readMarkdownAgents, readRootRule, readRulesDir, readSkillsDir, Reader, source } from "../shared/read-utils";
 import { antigravityPaths } from "./paths";
 
-const md = { tool: "antigravity", format: "markdown", verified: false } as const;
+const md = { tool: "antigravity", format: "markdown", verified: true } as const;
 
 function serversFrom(data: Record<string, unknown> | undefined, src: Source): McpServer[] {
   const record = data?.mcpServers;
@@ -22,9 +22,8 @@ export async function readAntigravity(ctx: PathContext): Promise<ToolConfig> {
 
   const rules = (
     await Promise.all([
-      readRootRule(r, g.rulesFile, { ...md, scope: "global" }),
-      hasProject ? readRootRule(r, p.rulesFile, { ...md, scope: "project" }) : null,
-      hasProject ? readRootRule(r, p.agentsFile, { ...md, scope: "project" }) : null,
+      ...g.rulesFiles.map((f) => readRootRule(r, f, { ...md, scope: "global" })),
+      ...(hasProject ? [p.rulesFile, p.agentsFile, ...p.nestedRulesFiles] : []).map((f) => readRootRule(r, f, { ...md, scope: "project" })),
     ])
   ).filter((x): x is Rule => x !== null);
   rules.push(...(await readRulesDir(r, g.rulesDir, { ...md, scope: "global" })));
@@ -36,13 +35,15 @@ export async function readAntigravity(ctx: PathContext): Promise<ToolConfig> {
   ];
   const skills = [
     ...(await readSkillsDir(r, g.skillsDir, { ...md, scope: "global" })),
+    ...(await readSkillsDir(r, g.cliSkillsDir, { ...md, scope: "global" })),
+    ...(await readSkillsDir(r, g.geminiSkillsDir, { ...md, scope: "global" })),
     ...(hasProject ? await readSkillsDir(r, p.skillsDir, { ...md, scope: "project" }) : []),
   ];
 
   const mcpServers = [
-    ...serversFrom((await r.json(g.mcpConfig)) as Record<string, unknown> | undefined, source("antigravity", "global", g.mcpConfig, "json", false)),
+    ...serversFrom((await r.json(g.mcpConfig)) as Record<string, unknown> | undefined, source("antigravity", "global", g.mcpConfig, "json")),
     ...(hasProject
-      ? serversFrom((await r.json(p.mcpConfig)) as Record<string, unknown> | undefined, source("antigravity", "project", p.mcpConfig, "json", false))
+      ? serversFrom((await r.json(p.mcpConfig)) as Record<string, unknown> | undefined, source("antigravity", "project", p.mcpConfig, "json"))
       : []),
   ];
 

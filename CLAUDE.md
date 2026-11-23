@@ -83,7 +83,8 @@
 - 아직 코드 서명 없음
 
 ### 확인 필요
-- Copilot·Antigravity 경로와 Codex 에이전트 폴더는 실제 설치로 확인하지 못했다 (`paths.ts`의 "unverified path", 화면에 `미확인 경로` 배지)
+- Copilot·Antigravity 경로와 Codex 에이전트 폴더는 공식 문서로 확인했다(2026-11). 실제 설치로는 써 보지 않았다. 공식 문서에 없는 경로는 `paths.ts`에 "unverified path"를 달고 `verified: false`로 읽는다(화면에 `미확인 경로` 배지)
+- Copilot `providers.json`(API 키 평문)·`config.json`, Antigravity `mcp_oauth_tokens.json`은 민감 파일로 읽지 않는다
 
 ## 작업 방식
 - 사용자 설정 파일을 건드리는 코드는 테스트용 임시 폴더(가짜 HOME)에서 먼저 검증한다

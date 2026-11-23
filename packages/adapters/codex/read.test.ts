@@ -80,10 +80,10 @@ test("reads MCP servers from config.toml tables", () => {
   assert.ok(config.mcpServers.some((s) => s.name === "local" && s.source.scope === "project"));
 });
 
-test("reads TOML agents as unverified and reports invalid TOML", () => {
+test("reads TOML agents and reports invalid TOML", () => {
   const reviewer = config.agents.find((a) => a.name === "reviewer");
   assert.equal(reviewer?.body, "Review carefully.");
-  assert.equal(reviewer?.source.verified, false);
+  assert.equal(reviewer?.source.verified, true);
   assert.ok(config.issues.some((i) => i.path.endsWith("bad.toml") && i.message === "invalid TOML"));
 });
 
