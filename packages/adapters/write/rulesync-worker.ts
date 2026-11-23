@@ -2,8 +2,8 @@
 // folder, so rulesync can only ever write inside that folder. The parent compares
 // the staged files with the real ones and applies them itself (with backups).
 //
-// Input:  AGENT_FORGE_JOB    JSON { stagingRoot, stagingHome, inputRoot, targets, features, global, outputRoot }
-// Output: AGENT_FORGE_RESULT path of a JSON file to write { outputs: string[] }
+// Input:  KITROOM_JOB    JSON { stagingRoot, stagingHome, inputRoot, targets, features, global, outputRoot }
+// Output: KITROOM_RESULT path of a JSON file to write { outputs: string[] }
 import { realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, relative } from "node:path";
@@ -25,8 +25,8 @@ function fail(message: string): never {
   process.exit(2);
 }
 
-const job = JSON.parse(process.env.AGENT_FORGE_JOB ?? "null") as Job | null;
-const resultPath = process.env.AGENT_FORGE_RESULT;
+const job = JSON.parse(process.env.KITROOM_JOB ?? "null") as Job | null;
+const resultPath = process.env.KITROOM_RESULT;
 if (!job || !resultPath) fail("missing job");
 
 // Refuse to run unless every home lookup and the cwd point into the staging area.

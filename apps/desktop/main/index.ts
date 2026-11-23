@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { IPC, type AppInfo, type AppSettings } from "../shared/api";
 import { homedir } from "node:os";
+import { migrateLegacyHome } from "@kitroom/adapters";
 import { buildOverview, overviewFingerprint, validateProject } from "./overview";
 import { ConfigWatcher, watchedPaths } from "./watch";
 import { registerForgeIpc, smokeCheckWorker } from "./forge";
@@ -107,7 +108,7 @@ function createWindow(): BrowserWindow {
     height: 780,
     minWidth: 900,
     minHeight: 560,
-    title: "Agent Forge",
+    title: "Kitroom",
     backgroundColor: windowBackground(),
     show: false,
     webPreferences: {
@@ -205,6 +206,8 @@ ipcMain.on(IPC.rendererReady, (event, error: unknown) => {
 });
 
 app.whenReady().then(async () => {
+  // Carry data over from the folder used before the rename (Agent Forge v0.1.0).
+  await migrateLegacyHome(settingsCtx()).catch((e: unknown) => console.error("could not move ~/.agent-forge:", e));
   applyTheme(await readSettings(settingsCtx()));
   setMenu();
   // Packaged apps get the icon from electron-builder; in dev, show it in the Dock too.

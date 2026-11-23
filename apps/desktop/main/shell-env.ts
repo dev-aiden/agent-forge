@@ -5,8 +5,8 @@ import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
 
-const START = "__AGENT_FORGE_PATH_START__";
-const END = "__AGENT_FORGE_PATH_END__";
+const START = "__KITROOM_PATH_START__";
+const END = "__KITROOM_PATH_END__";
 const TIMEOUT_MS = 5000;
 
 /** Common install locations, used as a fallback and appended to the shell PATH. */
@@ -86,8 +86,8 @@ export async function cliEnv(): Promise<Record<string, string>> {
 }
 
 /** Finds a CLI on the resolved PATH (never executes it). */
-export async function findCli(tool: import("@agent-forge/model").ToolId): Promise<string | null> {
-  const { scan } = await import("@agent-forge/adapters");
+export async function findCli(tool: import("@kitroom/model").ToolId): Promise<string | null> {
+  const { scan } = await import("@kitroom/adapters");
   const { homedir } = await import("node:os");
   const result = await scan({ home: homedir(), project: "", env: { PATH: await resolvedPath(), PATHEXT: process.env.PATHEXT } });
   return result.tools.find((t) => t.id === tool)?.binary ?? null;

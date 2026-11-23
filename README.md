@@ -1,12 +1,12 @@
 <img src="apps/desktop/build/icon.png" alt="" width="96" align="left">
 
-# Agent Forge
+# Kitroom
 
 **One place to manage agents, skills, rules and MCP servers for your AI coding CLIs.**
 
-Agent Forge is a free, open-source desktop app (macOS · Windows · Linux). Create an agent, skill, rule or MCP server once and apply it to Claude Code and Codex CLI in each tool's own format. See everything your tools are configured with, and run the CLIs in tabs side by side.
+Kitroom is a free, open-source desktop app (macOS · Windows · Linux). Create an agent, skill, rule or MCP server once and apply it to Claude Code and Codex CLI in each tool's own format. See everything your tools are configured with, and run the CLIs in tabs side by side.
 
-Agent Forge never calls an AI API. Each official CLI keeps running on your own subscription; your logins and tokens are never read.
+Kitroom never calls an AI API. Each official CLI keeps running on your own subscription; your logins and tokens are never read.
 
 ![Overview of Claude Code and Codex CLI configuration](docs/images/overview.png)
 
@@ -26,16 +26,16 @@ Agent Forge never calls an AI API. Each official CLI keeps running on your own s
 
 ## Install
 
-Download the latest release for your OS from **[Releases](https://github.com/dev-aiden/agent-forge/releases/latest)**:
+Download the latest release for your OS from **[Releases](https://github.com/dev-aiden/kitroom/releases/latest)**:
 
 | OS | File |
 |---|---|
-| macOS (Apple Silicon) | `agent-forge-<version>-mac-arm64.dmg` |
-| macOS (Intel) | `agent-forge-<version>-mac-x64.dmg` |
-| Windows 10/11 | `agent-forge-<version>-win-x64.exe` |
-| Linux (x64) | `agent-forge-<version>-linux-x86_64.AppImage` |
+| macOS (Apple Silicon) | `kitroom-<version>-mac-arm64.dmg` |
+| macOS (Intel) | `kitroom-<version>-mac-x64.dmg` |
+| Windows 10/11 | `kitroom-<version>-win-x64.exe` |
+| Linux (x64) | `kitroom-<version>-linux-x86_64.AppImage` |
 
-The app is not code-signed yet. On macOS, if it says the app "is damaged", run `xattr -cr "/Applications/Agent Forge.app"` once; on Windows choose **More info → Run anyway**. Details: [user guide](docs/usage.md#2-install).
+The app is not code-signed yet. On macOS, if it says the app "is damaged", run `xattr -cr "/Applications/Kitroom.app"` once; on Windows choose **More info → Run anyway**. Details: [user guide](docs/usage.md#2-install).
 
 ## Getting started
 
@@ -58,9 +58,9 @@ Full guide: **[English](docs/usage.md)** · **[한국어](docs/ko/사용법.md)*
 
 - No AI API calls, no API key field.
 - CLI login, token and auth files are never read, copied or sent.
-- Every write shows a diff first and is backed up to `~/.agent-forge/backups/`; undo is always available.
+- Every write shows a diff first and is backed up to `~/.kitroom/backups/`; undo is always available.
 - Secrets in MCP settings are masked in the UI.
-- Network: only `GET https://api.github.com/repos/dev-aiden/agent-forge/releases/latest` on launch, which can be turned off in Settings.
+- Network: only `GET https://api.github.com/repos/dev-aiden/kitroom/releases/latest` on launch, which can be turned off in Settings.
 
 Found a security problem? See [SECURITY.md](SECURITY.md).
 
@@ -77,7 +77,7 @@ npm run scan        # read-only: list config files of the four CLIs on this mach
 npm run smoke       # build and check that the app starts
 ```
 
-Package an installer: `npm run dist:mac | dist:win | dist:linux -w @agent-forge/desktop`.
+Package an installer: `npm run dist:mac | dist:win | dist:linux -w @kitroom/desktop`.
 
 Project layout:
 

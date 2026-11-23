@@ -1,5 +1,5 @@
 // Preview → apply → undo flow shared by every editing screen (agents, skills,
-// rules, MCP). One "Preview & apply" applies everything Agent Forge manages.
+// rules, MCP). One "Preview & apply" applies everything Kitroom manages.
 import { useCallback, useEffect, useState } from "react";
 import type { ApplySummary, ChangeSet } from "../../shared/api";
 import { PreviewDialog } from "./components/PreviewDialog";
@@ -21,7 +21,7 @@ export function useApplyFlow(shortPath: (path: string) => string) {
   const [busy, setBusy] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const refreshHistory = useCallback(async () => setHistory(await window.agentForge.history()), []);
+  const refreshHistory = useCallback(async () => setHistory(await window.kitroom.history()), []);
 
   useEffect(() => {
     refreshHistory().catch((e) => setError(errorText(e)));
@@ -32,7 +32,7 @@ export function useApplyFlow(shortPath: (path: string) => string) {
     setPreviewError(null);
     setBusy(true);
     try {
-      setPreview(await window.agentForge.previewApply());
+      setPreview(await window.kitroom.previewApply());
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -45,7 +45,7 @@ export function useApplyFlow(shortPath: (path: string) => string) {
     setBusy(true);
     setPreviewError(null);
     try {
-      const result = await window.agentForge.apply(preview.id);
+      const result = await window.kitroom.apply(preview.id);
       if (!result.ok) {
         setPreviewError(
           result.conflicts?.length
@@ -69,7 +69,7 @@ export function useApplyFlow(shortPath: (path: string) => string) {
 
   async function undoApply(id: string) {
     try {
-      const r = await window.agentForge.undo(id);
+      const r = await window.kitroom.undo(id);
       await refreshHistory();
       setNotice({
         text:

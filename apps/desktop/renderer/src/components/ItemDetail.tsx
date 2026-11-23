@@ -1,4 +1,4 @@
-import type { Item } from "@agent-forge/model";
+import type { Item } from "@kitroom/model";
 import { useT, type T } from "../i18n";
 import { ItemBadges } from "./Badges";
 

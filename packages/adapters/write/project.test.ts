@@ -1,4 +1,4 @@
-// Project scope: originals under ~/.agent-forge/projects/<id>, outputs inside the project folder.
+// Project scope: originals under ~/.kitroom/projects/<id>, outputs inside the project folder.
 import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -29,7 +29,7 @@ async function filesUnder(dir: string): Promise<string[]> {
 }
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "agent-forge-project-"));
+  root = await mkdtemp(join(tmpdir(), "kitroom-project-"));
   home = join(root, "home");
   project = join(home, "work", "app");
   ctx = { home, project, env: {} };
@@ -133,5 +133,5 @@ test("the home folder and its parents are refused as a project", async () => {
   for (const bad of [home, root]) {
     await assert.rejects(preview({ home, project: bad, env: {} }, runners), /home folder/);
   }
-  await assert.rejects(preview({ home, project: join(home, ".agent-forge", "x"), env: {} }, runners), /belongs to Agent Forge/);
+  await assert.rejects(preview({ home, project: join(home, ".kitroom", "x"), env: {} }, runners), /belongs to Kitroom/);
 });

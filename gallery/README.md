@@ -1,6 +1,6 @@
 # Gallery
 
-Starter templates shown in Agent Forge under **Templates**. They are bundled
+Starter templates shown in Kitroom under **Templates**. They are bundled
 into the app at build time; the app never downloads templates.
 
 | Folder | File | Becomes |

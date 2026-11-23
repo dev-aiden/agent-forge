@@ -1,17 +1,17 @@
-// Agent Forge's own storage (~/.agent-forge). This is app-owned data, never a tool's config.
+// Kitroom's own storage (~/.kitroom). This is app-owned data, never a tool's config.
 //
-//   ~/.agent-forge/
+//   ~/.kitroom/
 //     source/subagents/<name>.md   app-managed agents, in rulesync source format
 //     source/skills/<name>/SKILL.md app-managed skills, in rulesync source format
 //     backups/<apply-id>/          originals saved before each apply + manifest.json
-//     state.json                   files currently owned by Agent Forge (path → hash)
+//     state.json                   files currently owned by Kitroom (path → hash)
 //     projects/<id>/               the same layout for one project (ctx.project set),
 //                                  plus project.json naming the project folder
 //
 // The scope is chosen by `ctx.project`: "" = global (~), a path = that project.
 // Project originals stay on this computer; only generated files go into the project.
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { stringify as stringifyYaml } from "yaml";
 import {
@@ -22,12 +22,36 @@ import {
   type ManagedAgent,
   type ManagedSkill,
   type ToolId,
-} from "@agent-forge/model";
+} from "@kitroom/model";
 import { Reader, splitFrontmatter, str, stringList } from "../shared/read-utils";
 import type { PathContext } from "../types";
 
 export function forgeHome(ctx: PathContext): string {
-  return ctx.env.AGENT_FORGE_HOME ?? join(ctx.home, ".agent-forge");
+  return ctx.env.KITROOM_HOME ?? join(ctx.home, ".kitroom");
+}
+
+/** Folder used before the app was renamed from "Agent Forge" (v0.1.0). */
+export const LEGACY_HOME_NAME = ".agent-forge";
+
+/**
+ * Moves ~/.agent-forge to ~/.kitroom once, so agents, skills, settings and
+ * backups (undo) carry over after the rename. Does nothing when a custom home
+ * is set, the legacy folder is missing, or ~/.kitroom already exists.
+ */
+export async function migrateLegacyHome(ctx: PathContext): Promise<boolean> {
+  if (ctx.env.KITROOM_HOME) return false;
+  const legacy = join(ctx.home, LEGACY_HOME_NAME);
+  const target = forgeHome(ctx);
+  if (!(await exists(legacy)) || (await exists(target))) return false;
+  await rename(legacy, target);
+  return true;
+}
+
+async function exists(path: string): Promise<boolean> {
+  return stat(path).then(
+    () => true,
+    () => false,
+  );
 }
 
 /** Folder name for a project: readable name + hash of the full path. */
@@ -54,7 +78,7 @@ export function forgePaths(ctx: PathContext) {
 /** Writes via a temp file + rename so a crash never leaves a half-written file. */
 export async function writeFileAtomic(path: string, content: string | Buffer, mode?: number): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  const tmp = `${path}.agent-forge-${process.pid}-${Date.now()}.tmp`;
+  const tmp = `${path}.kitroom-${process.pid}-${Date.now()}.tmp`;
   await writeFile(tmp, content, mode === undefined ? undefined : { mode });
   try {
     await rename(tmp, path);
@@ -270,10 +294,10 @@ export async function deleteSkill(ctx: PathContext, name: string): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
-// state: which tool files Agent Forge currently owns
+// state: which tool files Kitroom currently owns
 
 export interface ForgeState {
-  /** Absolute path → sha256 of the content Agent Forge last wrote. */
+  /** Absolute path → sha256 of the content Kitroom last wrote. */
   managed: Record<string, string>;
 }
 
@@ -295,7 +319,7 @@ export async function ensureForgeDirs(ctx: PathContext): Promise<void> {
   await mkdir(p.agents, { recursive: true });
   await mkdir(p.skills, { recursive: true });
   await mkdir(p.backups, { recursive: true });
-  // So a person browsing ~/.agent-forge/projects can tell which folder is which.
+  // So a person browsing ~/.kitroom/projects can tell which folder is which.
   if (ctx.project) await writeFileAtomic(join(p.scopeRoot, "project.json"), `${JSON.stringify({ path: ctx.project }, null, 2)}\n`);
 }
 

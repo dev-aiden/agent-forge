@@ -1,6 +1,6 @@
 // Reads Google Antigravity CLI rules, agents, skills and MCP servers into the common model. Read-only.
 // Paths are documented but unverified on a real install, so every item is marked unverified.
-import type { McpServer, Rule, Source, ToolConfig } from "@agent-forge/model";
+import type { McpServer, Rule, Source, ToolConfig } from "@kitroom/model";
 import type { PathContext } from "../types";
 import { byName, mcpFromJson, readMarkdownAgents, readRootRule, readRulesDir, readSkillsDir, Reader, source } from "../shared/read-utils";
 import { antigravityPaths } from "./paths";

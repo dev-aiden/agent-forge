@@ -9,7 +9,7 @@ import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { maskManagedMcp, type ManagedAgent, type ManagedMcpServer, type ManagedRule, type ManagedSkill } from "@agent-forge/model";
+import { maskManagedMcp, type ManagedAgent, type ManagedMcpServer, type ManagedRule, type ManagedSkill } from "@kitroom/model";
 import {
   apply,
   ConflictError,
@@ -39,7 +39,7 @@ import {
   type PathContext,
   type PipelineRunners,
   type WorkerRunner,
-} from "@agent-forge/adapters";
+} from "@kitroom/adapters";
 import { IPC, type ApplyResult, type WriteScope } from "../shared/api";
 import { cliEnv, findCli } from "./shell-env";
 
@@ -51,7 +51,7 @@ const CLI_TIMEOUT_MS = 60_000;
 /** Runs rulesync in an Electron utility process (a separate Node process). */
 const utilityRunner: WorkerRunner = ({ env, cwd }) =>
   new Promise((resolve, reject) => {
-    const child = utilityProcess.fork(WORKER, [], { env, cwd, stdio: "pipe", serviceName: "Agent Forge rulesync" });
+    const child = utilityProcess.fork(WORKER, [], { env, cwd, stdio: "pipe", serviceName: "Kitroom rulesync" });
     let stderr = "";
     child.stderr?.on("data", (d) => (stderr += d));
     child.on("exit", (code) =>
@@ -97,7 +97,7 @@ async function claudeRunner(): Promise<ClaudeCliRunner | null> {
 async function runners(): Promise<PipelineRunners> {
   // Claude Code refuses `mcp add-json -` (stdin) when run from inside a Claude Code
   // session, because its own permission prompt could not be shown. Respect that:
-  // do not try, and tell the user to launch Agent Forge normally.
+  // do not try, and tell the user to launch Kitroom normally.
   if (process.env.CLAUDECODE) return { worker: utilityRunner, claude: null, claudeUnavailable: "inside-session" };
   const claude = await claudeRunner();
   return { worker: utilityRunner, claude, claudeUnavailable: claude ? undefined : "not-found" };
@@ -190,7 +190,7 @@ export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean
 }
 
 /** Manifests hold MCP definitions (with secrets): only send what the UI needs. */
-function summary(m: import("@agent-forge/adapters").ApplyManifest) {
+function summary(m: import("@kitroom/adapters").ApplyManifest) {
   return {
     id: m.id,
     createdAt: m.createdAt,
@@ -207,10 +207,10 @@ function summary(m: import("@agent-forge/adapters").ApplyManifest) {
 export async function smokeCheckWorker(): Promise<void> {
   const { mkdtemp, rm } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
-  const root = await mkdtemp(join(tmpdir(), "agent-forge-smoke-"));
+  const root = await mkdtemp(join(tmpdir(), "kitroom-smoke-"));
   try {
     const home = join(root, "home");
-    const smokeCtx: PathContext = { home, project: "", env: { AGENT_FORGE_HOME: join(root, "forge") } };
+    const smokeCtx: PathContext = { home, project: "", env: { KITROOM_HOME: join(root, "forge") } };
     await saveAgent(smokeCtx, { name: "smoke", description: "Smoke test", body: "Hi", targets: ["claude", "codex"] });
     const set = await preview(smokeCtx, { worker: utilityRunner, claude: null });
     const creates = set.changes.filter((c) => c.action === "create").length;

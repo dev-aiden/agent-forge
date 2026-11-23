@@ -36,7 +36,7 @@ async function snapshot(dir: string, acc = new Map<string, string>()) {
 }
 
 before(async () => {
-  root = await mkdtemp(join(tmpdir(), "agent-forge-scan-"));
+  root = await mkdtemp(join(tmpdir(), "kitroom-scan-"));
   home = join(root, "home");
   project = join(root, "project");
 

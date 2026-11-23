@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { WRITABLE_AGENT_TOOLS, type ManagedMcpServer, type McpTransport, type ToolId } from "@agent-forge/model";
-import { uniqueName, type GalleryTemplate } from "@agent-forge/model/gallery";
+import { WRITABLE_AGENT_TOOLS, type ManagedMcpServer, type McpTransport, type ToolId } from "@kitroom/model";
+import { uniqueName, type GalleryTemplate } from "@kitroom/model/gallery";
 import { useApplyFlow } from "../apply-flow";
 import { Badge } from "../components/Badges";
 import { Field, TargetPicker, TOOL_LABEL } from "../components/Form";
@@ -60,7 +60,7 @@ function fromDraft(d: Draft): ManagedMcpServer {
   };
 }
 
-/** MCP servers managed by Agent Forge. Secret values arrive masked and stay masked. */
+/** MCP servers managed by Kitroom. Secret values arrive masked and stay masked. */
 export function McpView({ shortPath }: { shortPath(path: string): string }) {
   const t = useT();
   const flow = useApplyFlow(shortPath);
@@ -72,7 +72,7 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
   const [picking, setPicking] = useState(false);
   const lang = useLang();
 
-  const load = useCallback(async () => setServers(await window.agentForge.listMcp()), []);
+  const load = useCallback(async () => setServers(await window.kitroom.listMcp()), []);
   useEffect(() => {
     load().catch((e) => flow.setError(errorText(e)));
   }, [load]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -88,7 +88,7 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
 
   async function doImport() {
     try {
-      const r = await window.agentForge.importMcp();
+      const r = await window.kitroom.importMcp();
       await load();
       flow.setNotice({
         text: [t("mcp.imported", { n: r.added.length }), r.conflicts.length ? t("mcp.conflicts", { names: r.conflicts.join(", ") }) : ""]
@@ -117,7 +117,7 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
   async function save() {
     flow.setError(null);
     try {
-      const s = await window.agentForge.saveMcp(fromDraft(draft), editing ?? undefined);
+      const s = await window.kitroom.saveMcp(fromDraft(draft), editing ?? undefined);
       await load();
       const d = toDraft(s);
       setEditing(s.name);
@@ -131,7 +131,7 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
 
   async function remove() {
     if (!editing || !confirm(t("mcp.confirmDelete", { name: editing }))) return;
-    await window.agentForge.deleteMcp(editing);
+    await window.kitroom.deleteMcp(editing);
     await load();
     setEditing(null);
     setDraft(EMPTY);
@@ -140,7 +140,7 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
 
   async function stop() {
     if (!confirm(t("mcp.unmanageConfirm"))) return;
-    await window.agentForge.unmanageMcp();
+    await window.kitroom.unmanageMcp();
     await load();
     select(null);
   }

@@ -1,5 +1,5 @@
-// Public entry of @agent-forge/adapters.
-import type { ToolConfig, ToolId } from "@agent-forge/model";
+// Public entry of @kitroom/adapters.
+import type { ToolConfig, ToolId } from "@kitroom/model";
 import { readAntigravity } from "./antigravity/read";
 import { readClaude } from "./claude/read";
 import { readCodex } from "./codex/read";
@@ -63,4 +63,4 @@ export {
   type RuleImportResult,
 } from "./write/import";
 export { displayChangeSet } from "./write/display";
-export { deleteAgent, deleteSkill, forgeHome, listAgents, listSkills, saveAgent, saveSkill, writeFileAtomic } from "./write/store";
+export { deleteAgent, deleteSkill, forgeHome, listAgents, migrateLegacyHome, listSkills, saveAgent, saveSkill, writeFileAtomic } from "./write/store";

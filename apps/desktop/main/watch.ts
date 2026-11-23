@@ -1,7 +1,7 @@
 // Watches every config location the adapters know about and reports changes (debounced).
 // Read-only: chokidar only observes the file system.
 import { watch, type FSWatcher } from "chokidar";
-import { isSensitive, TOOLS, type PathContext } from "@agent-forge/adapters";
+import { isSensitive, TOOLS, type PathContext } from "@kitroom/adapters";
 
 /** Candidate paths of all tools. Project/local scope only when a project is selected. */
 export function watchedPaths(ctx: PathContext): string[] {

@@ -21,14 +21,14 @@ test("sanitizeSettings keeps only known values", () => {
   assert.deepEqual(sanitizeSettings(null), DEFAULT_SETTINGS);
 });
 
-test("settings round-trip in Agent Forge's own folder", async () => {
-  const root = await mkdtemp(join(tmpdir(), "agent-forge-settings-"));
+test("settings round-trip in Kitroom's own folder", async () => {
+  const root = await mkdtemp(join(tmpdir(), "kitroom-settings-"));
   try {
     const ctx = { home: root, project: "", env: {} };
     assert.deepEqual(await readSettings(ctx), DEFAULT_SETTINGS);
     await writeSettings(ctx, { language: "en", disabledTools: ["claude"], extra: "dropped" });
     assert.deepEqual(await readSettings(ctx), { ...DEFAULT_SETTINGS, language: "en", disabledTools: ["claude"] });
-    assert.ok(!(await readFile(join(root, ".agent-forge", "settings.json"), "utf8")).includes("dropped"));
+    assert.ok(!(await readFile(join(root, ".kitroom", "settings.json"), "utf8")).includes("dropped"));
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { MASK } from "@agent-forge/model";
+import { MASK } from "@kitroom/model";
 import type { PathContext } from "../types";
 import type { ClaudeCliRunner } from "./claude-mcp";
 import { deleteMcpServer, readManagedMcp, readManagedRule, saveManagedRule, saveMcpServer } from "./config-store";
@@ -43,7 +43,7 @@ const runners: PipelineRunners = { worker: nodeWorkerRunner, claude: fakeClaude 
 const claudeServers = async () => JSON.parse(await readFile(claudeJson(), "utf8")).mcpServers ?? {};
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "agent-forge-config-"));
+  root = await mkdtemp(join(tmpdir(), "kitroom-config-"));
   home = join(root, "home");
   ctx = { home, project: "", env: {} };
   calls.length = 0;
@@ -145,7 +145,7 @@ test("mcp: removing a server and editing env keep secrets when masked values are
   assert.match(toml.after!, /model = "gpt-5"/);
 });
 
-test("mcp: servers added outside Agent Forge are flagged before they would be removed", async () => {
+test("mcp: servers added outside Kitroom are flagged before they would be removed", async () => {
   await importMcp(ctx);
   const data = JSON.parse(await readFile(claudeJson(), "utf8"));
   data.mcpServers.sentry = { type: "stdio", command: "sentry-mcp" };
@@ -189,11 +189,11 @@ test("display copy of a preview never contains secrets", async () => {
 
 test("managed MCP file and backups are private to the user", { skip: process.platform === "win32" }, async () => {
   await importMcp(ctx);
-  const mode = (await stat(join(home, ".agent-forge", "source", "mcp.jsonc"))).mode & 0o777;
+  const mode = (await stat(join(home, ".kitroom", "source", "mcp.jsonc"))).mode & 0o777;
   assert.equal(mode, 0o600);
   await saveMcpServer(ctx, { name: "z", transport: "stdio", command: "z", targets: ["codex"] });
   const m = await apply(ctx, await preview(ctx, runners), runners);
-  const dir = join(home, ".agent-forge", "backups", m.id);
+  const dir = join(home, ".kitroom", "backups", m.id);
   assert.equal((await stat(dir)).mode & 0o777, 0o700);
   assert.equal((await stat(join(dir, "manifest.json"))).mode & 0o777, 0o600);
 });
@@ -223,7 +223,7 @@ test("mcp: Codex-only fields (timeouts, enabled = false) survive import, edit an
   assert.deepEqual(slow.codexExtra, { startup_timeout_sec: 20, tool_timeout_sec: 90, enabled: false, bearer_token_env_var: "SECRET_BT" });
 
   // The renderer sees the extras masked and sends them back masked: the stored values are kept.
-  const { maskManagedMcp } = await import("@agent-forge/model");
+  const { maskManagedMcp } = await import("@kitroom/model");
   const masked = maskManagedMcp(slow);
   assert.equal(masked.codexExtra?.bearer_token_env_var, MASK);
   assert.equal(masked.codexExtra?.startup_timeout_sec, 20);

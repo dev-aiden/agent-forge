@@ -1,4 +1,4 @@
-import { TOOL_IDS, type ToolId } from "@agent-forge/model";
+import { TOOL_IDS, type ToolId } from "@kitroom/model";
 import type { AppSettings, Language, Theme, ToolOverview } from "../../../shared/api";
 import { useT } from "../i18n";
 

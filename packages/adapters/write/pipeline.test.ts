@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import type { ManagedAgent } from "@agent-forge/model";
+import type { ManagedAgent } from "@kitroom/model";
 import type { PathContext } from "../types";
 import { nodeWorkerRunner } from "./node-runner";
 import type { PipelineRunners } from "./pipeline";
@@ -45,7 +45,7 @@ const exists = async (p: string) => (await stat(p).catch(() => null)) !== null;
 const toolHome = () => join(root, "home");
 
 before(async () => {
-  root = await mkdtemp(join(tmpdir(), "agent-forge-pipeline-"));
+  root = await mkdtemp(join(tmpdir(), "kitroom-pipeline-"));
 });
 after(() => rm(root, { recursive: true, force: true }));
 
@@ -137,7 +137,7 @@ test("refuses to apply when a file changed after the preview", async () => {
   assert.equal(await readFile(join(claudeAgents, "forge-reviewer.md"), "utf8"), "user wrote this meanwhile\n");
 });
 
-test("flags overwriting a file Agent Forge did not create", async () => {
+test("flags overwriting a file Kitroom did not create", async () => {
   await put(join(claudeAgents, "forge-reviewer.md"), "---\nname: forge-reviewer\n---\nUser's own.\n");
   await saveAgent(ctx, reviewer);
   const set = await preview(ctx, runners);

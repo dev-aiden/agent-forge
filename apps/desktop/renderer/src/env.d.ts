@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
-import type { AgentForgeApi } from "../../shared/api";
+import type { KitroomApi } from "../../shared/api";
 
 declare global {
   interface Window {
-    agentForge: AgentForgeApi;
+    kitroom: KitroomApi;
   }
 }

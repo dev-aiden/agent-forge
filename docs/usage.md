@@ -1,8 +1,8 @@
-# Agent Forge user guide
+# Kitroom user guide
 
-Agent Forge is a free, open-source desktop app (macOS · Windows · Linux) for creating **agents, skills, rules and MCP servers** for AI coding CLIs such as Claude Code and Codex CLI in one place, and applying them to several tools at once.
+Kitroom is a free, open-source desktop app (macOS · Windows · Linux) for creating **agents, skills, rules and MCP servers** for AI coding CLIs such as Claude Code and Codex CLI in one place, and applying them to several tools at once.
 
-- Write a "code reviewer" agent once; Agent Forge writes it in each selected tool's format.
+- Write a "code reviewer" agent once; Kitroom writes it in each selected tool's format.
 - See every rule, agent, skill and MCP server your tools currently use, in one overview.
 - Run the installed CLIs side by side in terminal tabs inside the app.
 
@@ -46,23 +46,23 @@ Agent Forge is a free, open-source desktop app (macOS · Windows · Linux) for c
 
 ## 2. Install
 
-Download the file for your OS from [GitHub Releases](https://github.com/dev-aiden/agent-forge/releases/latest).
+Download the file for your OS from [GitHub Releases](https://github.com/dev-aiden/kitroom/releases/latest).
 
 | OS | File |
 |---|---|
-| macOS (Apple Silicon, M1 or later) | `agent-forge-<version>-mac-arm64.dmg` |
-| macOS (Intel) | `agent-forge-<version>-mac-x64.dmg` |
-| Windows | `agent-forge-<version>-win-x64.exe` |
-| Linux | `agent-forge-<version>-linux-x86_64.AppImage` |
+| macOS (Apple Silicon, M1 or later) | `kitroom-<version>-mac-arm64.dmg` |
+| macOS (Intel) | `kitroom-<version>-mac-x64.dmg` |
+| Windows | `kitroom-<version>-win-x64.exe` |
+| Linux | `kitroom-<version>-linux-x86_64.AppImage` |
 
 > The app is not code-signed yet, so **your OS warns you the first time you open it.** Here is how to get past it.
 
 ### macOS
 
-1. Open the `.dmg` and drag **Agent Forge** into `Applications`.
+1. Open the `.dmg` and drag **Kitroom** into `Applications`.
 2. If macOS says the app **"is damaged and can't be opened"** or comes from an **unidentified developer**, run this once in Terminal:
    ```bash
-   xattr -cr "/Applications/Agent Forge.app"
+   xattr -cr "/Applications/Kitroom.app"
    ```
    Then open it again. (This removes the "downloaded from the internet" quarantine flag.)
 3. Or use **Open Anyway** at the bottom of `System Settings → Privacy & Security`.
@@ -78,8 +78,8 @@ Download the file for your OS from [GitHub Releases](https://github.com/dev-aide
 ### Linux
 
 ```bash
-chmod +x agent-forge-*.AppImage
-./agent-forge-*.AppImage
+chmod +x kitroom-*.AppImage
+./kitroom-*.AppImage
 ```
 
 ---
@@ -102,7 +102,7 @@ New to these tools? Skip step 2 and start from a template.
 ## 4. The window
 
 ```
-Agent Forge [Overview|Agents|Skills|Rules|MCP|Terminal]  Project: None (global only) [Choose…]   ● Read  [Refresh] [Settings]
+Kitroom [Overview|Agents|Skills|Rules|MCP|Terminal]  Project: None (global only) [Choose…]   ● Read  [Refresh] [Settings]
 ```
 
 | Menu | What it does |
@@ -125,7 +125,7 @@ The green dot (●) means config files are **being watched**: changes made elsew
 Agents, Skills, Rules and MCP all work the same way.
 
 1. **Save** — fill in the form and click `Create agent` (or `Save changes`).
-   This only saves inside Agent Forge (`~/.agent-forge`). **Your tool configs are unchanged.**
+   This only saves inside Kitroom (`~/.kitroom`). **Your tool configs are unchanged.**
 2. **Preview & apply** — the button at the top right opens a review window:
    - which files will be `created` / `modified` / `deleted`;
    - the exact lines that change in each file (green = added, red = removed);
@@ -146,7 +146,7 @@ The **Apply to** bar above Agents, Skills, Rules and MCP chooses the target.
 
 - `This project` is available after choosing a folder with **Project [Choose…]**.
 - Global and project items are **separate lists**.
-- Project originals stay on your computer (`~/.agent-forge/projects/`); only the files the tools read are written into the project.
+- Project originals stay on your computer (`~/.kitroom/projects/`); only the files the tools read are written into the project.
 
 ---
 
@@ -183,7 +183,7 @@ The **Apply to** bar above Agents, Skills, Rules and MCP chooses the target.
 
 > **If Claude Code or Codex already has agents, click `Import` first.** Creating an agent with the same name as one the app does not know about causes a conflict when applying.
 > - Imported agents appear in the list and can be edited and applied from then on.
-> - Right after importing, `Preview & apply` should say "Everything is already up to date". If it shows changes, please [open an issue](https://github.com/dev-aiden/agent-forge/issues).
+> - Right after importing, `Preview & apply` should say "Everything is already up to date". If it shows changes, please [open an issue](https://github.com/dev-aiden/kitroom/issues).
 > - Settings the form does not show (Claude Code `color`, `permissionMode`; Codex `model`, `sandbox_mode`, …) appear under "Other settings" and are kept when you save.
 > - If both tools have the same name with different content, Claude Code's version is imported and you are told.
 > - Agents whose file name differs from their `name` are not imported (applying would create a duplicate). Rename the file to match, then import again.
@@ -220,7 +220,7 @@ Same as agents; the body goes into the `SKILL.md` field.
 `Import` also brings in existing skills with their other files (`scripts/`, …), which are kept as they are. These are skipped, with the reason shown:
 - skills containing non-text files such as images;
 - skills whose folder name differs from their `name` (applying would create a duplicate);
-- skills with settings Agent Forge cannot keep yet (e.g. `license` on a Codex skill, unknown frontmatter keys);
+- skills with settings Kitroom cannot keep yet (e.g. `license` on a Codex skill, unknown frontmatter keys);
 - skills containing symbolic links, or more than 200 files / 20 MB;
 - Codex skills with UI settings (`agents/openai.yaml`);
 - skills in the old location `~/.codex/skills`;
@@ -293,7 +293,7 @@ Shortcuts (⌘ on macOS, Ctrl on Windows/Linux):
 - **Theme**: system / light / dark
 - **Tools**: turned-off tools are hidden in Overview and Terminal.
 - **Check for new versions on launch**: asks GitHub for the latest release and shows a banner if there is a newer one. Nothing is installed automatically. Turn it off and the app makes no network requests at all.
-- Settings live in `~/.agent-forge/settings.json`.
+- Settings live in `~/.kitroom/settings.json`.
 
 ---
 
@@ -318,8 +318,8 @@ Files you edited yourself after applying are left alone (the notice tells you wh
 If the app will not open:
 
 - Backups:
-  - global: `~/.agent-forge/backups/<date-time-…>/`
-  - project: `~/.agent-forge/projects/<project-…>/backups/<date-time-…>/`
+  - global: `~/.kitroom/backups/<date-time-…>/`
+  - project: `~/.kitroom/projects/<project-…>/backups/<date-time-…>/`
 - `manifest.json` in that folder lists each **original path (`path`)** and its **backup file (`backup`, e.g. `000.bak`)**.
   Copy the `.bak` file back to the original path. `backup: null` means the app created that file: delete it.
 - Claude Code global MCP servers: `claude mcp list` / `claude mcp remove <name> -s user`.
@@ -328,7 +328,7 @@ If the app will not open:
 
 ### Uninstall completely
 1. Remove the app (macOS: move it to the Trash / Windows: Settings → Apps).
-2. Delete the app data: the `~/.agent-forge` folder.
+2. Delete the app data: the `~/.kitroom` folder.
    (Tool config files you applied stay. Undo first if you want them back.)
 
 ### Common messages
@@ -338,7 +338,7 @@ If the app will not open:
 | "inside a Claude Code session…" (MCP apply blocked) | The app was started from inside Claude Code. Open it normally. |
 | "changed since the preview. Preview again" | A file changed after the preview. Preview again — this is a safety check. |
 | A greyed-out terminal button | The CLI was not found. Check `which claude` (Windows: `where claude`) in a normal terminal. |
-| "This file was not created by Agent Forge" | A file with the same name exists and will be replaced. The original is backed up. |
+| "This file was not created by Kitroom" | A file with the same name exists and will be replaced. The original is backed up. |
 
 ---
 
@@ -353,8 +353,8 @@ If the app will not open:
 
 ## 10. Questions and ideas
 
-Report bugs and ideas in [GitHub Issues](https://github.com/dev-aiden/agent-forge/issues) (forms are provided).
-Report security problems privately through [security advisories](https://github.com/dev-aiden/agent-forge/security/advisories/new), not as a public issue.
+Report bugs and ideas in [GitHub Issues](https://github.com/dev-aiden/kitroom/issues) (forms are provided).
+Report security problems privately through [security advisories](https://github.com/dev-aiden/kitroom/security/advisories/new), not as a public issue.
 
 > ⚠️ Before posting screenshots or files, **make sure no tokens, passwords or emails are visible.**
-> Never attach `~/.agent-forge/backups`, `~/.claude.json`, `auth.json` or similar files.
+> Never attach `~/.kitroom/backups`, `~/.claude.json`, `auth.json` or similar files.

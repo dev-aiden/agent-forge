@@ -13,7 +13,7 @@ const root = import.meta.dirname;
  */
 function devCsp(): Plugin {
   return {
-    name: "agent-forge:dev-csp",
+    name: "kitroom:dev-csp",
     apply: "serve",
     transformIndexHtml(html) {
       return html

@@ -1,4 +1,4 @@
-import { WRITABLE_AGENT_TOOLS, type ToolId } from "@agent-forge/model";
+import { WRITABLE_AGENT_TOOLS, type ToolId } from "@kitroom/model";
 
 export const TOOL_LABEL: Record<ToolId, string> = {
   claude: "Claude Code",
@@ -17,7 +17,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
   );
 }
 
-/** Checkboxes for the tools Agent Forge can write to. */
+/** Checkboxes for the tools Kitroom can write to. */
 export function TargetPicker({ value, onChange }: { value: ToolId[]; onChange(v: ToolId[]): void }) {
   return (
     <div className="flex gap-4">

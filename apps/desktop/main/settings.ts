@@ -1,8 +1,8 @@
-// App settings stored in ~/.agent-forge/settings.json (Agent Forge's own folder).
+// App settings stored in ~/.kitroom/settings.json (Kitroom's own folder).
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { forgeHome, writeFileAtomic, type PathContext } from "@agent-forge/adapters";
-import { TOOL_IDS, type ToolId } from "@agent-forge/model";
+import { forgeHome, writeFileAtomic, type PathContext } from "@kitroom/adapters";
+import { TOOL_IDS, type ToolId } from "@kitroom/model";
 import { TERMINAL_FONT_SIZE, type AppSettings, type Language, type Theme } from "../shared/api";
 
 export const DEFAULT_SETTINGS: AppSettings = {

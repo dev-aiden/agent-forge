@@ -1,4 +1,4 @@
-import type { Scope } from "@agent-forge/model";
+import type { Scope } from "@kitroom/model";
 
 /** Shows paths under the project as `./…` and under home as `~/…`. Works with / and \ separators. */
 export function makeShortPath(home: string, project: string | null) {

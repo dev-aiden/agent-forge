@@ -35,7 +35,7 @@ test("Reader refuses to open credential files", async () => {
 });
 
 test("read adapters do not modify any file", async () => {
-  const root = await mkdtemp(join(tmpdir(), "agent-forge-ro-"));
+  const root = await mkdtemp(join(tmpdir(), "kitroom-ro-"));
   try {
     const home = join(root, "home");
     const project = join(root, "project");

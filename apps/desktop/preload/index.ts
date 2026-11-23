@@ -1,7 +1,7 @@
 // Sandboxed preload: the only bridge between the renderer and the main process.
 // Expose narrow, purpose-built functions only — never ipcRenderer itself.
 import { contextBridge, ipcRenderer } from "electron";
-import { IPC, type AgentForgeApi } from "../shared/api";
+import { IPC, type KitroomApi } from "../shared/api";
 
 /** Adds a main → renderer listener and returns a function that removes it. */
 function subscribe<A extends unknown[]>(channel: string, fn: (...args: A) => void): () => void {
@@ -12,7 +12,7 @@ function subscribe<A extends unknown[]>(channel: string, fn: (...args: A) => voi
   };
 }
 
-const api: AgentForgeApi = {
+const api: KitroomApi = {
   getInfo: () => ipcRenderer.invoke(IPC.getInfo),
   getOverview: (project) => ipcRenderer.invoke(IPC.getOverview, project),
   pickProject: () => ipcRenderer.invoke(IPC.pickProject),
@@ -60,4 +60,4 @@ const api: AgentForgeApi = {
   notifyReady: (error) => ipcRenderer.send(IPC.rendererReady, typeof error === "string" ? error : undefined),
 };
 
-contextBridge.exposeInMainWorld("agentForge", api);
+contextBridge.exposeInMainWorld("kitroom", api);

@@ -4,7 +4,7 @@
 //   npm run read -- [--project <dir>] [--home <dir>] [--json]
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { maskToolConfig, type ToolConfig } from "@agent-forge/model";
+import { maskToolConfig, type ToolConfig } from "@kitroom/model";
 import { READERS } from "../index";
 import type { PathContext } from "../types";
 

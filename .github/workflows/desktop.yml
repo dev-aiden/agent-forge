@@ -36,7 +36,7 @@ jobs:
         run: npm test
 
       - name: Build and package (unsigned)
-        run: npm run dist -w @agent-forge/desktop
+        run: npm run dist -w @kitroom/desktop
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
@@ -64,7 +64,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: agent-forge-${{ runner.os }}
+          name: kitroom-${{ runner.os }}
           path: |
             apps/desktop/release/*.dmg
             apps/desktop/release/*.exe
@@ -103,5 +103,5 @@ jobs:
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --draft --title "Agent Forge ${GITHUB_REF_NAME#v}" --notes-file notes.md
+        run: gh release create "$GITHUB_REF_NAME" dist/* --draft --title "Kitroom ${GITHUB_REF_NAME#v}" --notes-file notes.md
 

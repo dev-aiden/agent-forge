@@ -47,12 +47,12 @@ let wired = false;
 function wireOnce() {
   if (wired) return;
   wired = true;
-  window.agentForge.onTermData((id, data) => {
+  window.kitroom.onTermData((id, data) => {
     const h = handlers.get(id);
     if (h) h(data);
     else pending.set(id, [...(pending.get(id) ?? []), data]);
   });
-  window.agentForge.onTermExit((id, code) => exitHandlers.get(id)?.(code));
+  window.kitroom.onTermExit((id, code) => exitHandlers.get(id)?.(code));
 }
 
 interface Tab {
@@ -206,7 +206,7 @@ function TerminalPane({ target, visible, shortPath, fontSize, onFontSize, onRest
     // Links open in the default browser through the main process (http/https only).
     term.loadAddon(new WebLinksAddon((event, uri) => {
       event.preventDefault();
-      window.agentForge.openExternal(uri);
+      window.kitroom.openExternal(uri);
     }));
     term.open(host.current!);
     termRef.current = term;
@@ -236,12 +236,12 @@ function TerminalPane({ target, visible, shortPath, fontSize, onFontSize, onRest
         const k = e.key.toLowerCase();
         if (k === "c") {
           const sel = term.getSelection();
-          if (sel) window.agentForge.clipboardWrite(sel);
+          if (sel) window.kitroom.clipboardWrite(sel);
           e.preventDefault();
           return false;
         }
         if (k === "v") {
-          void window.agentForge.clipboardRead().then((text) => text && term.paste(text));
+          void window.kitroom.clipboardRead().then((text) => text && term.paste(text));
           e.preventDefault();
           return false;
         }
@@ -252,10 +252,10 @@ function TerminalPane({ target, visible, shortPath, fontSize, onFontSize, onRest
     let sessionId: number | null = null;
     let disposed = false;
 
-    window.agentForge.termSpawn(target, term.cols, term.rows).then(
+    window.kitroom.termSpawn(target, term.cols, term.rows).then(
       (session) => {
         if (disposed) {
-          window.agentForge.termKill(session.id);
+          window.kitroom.termKill(session.id);
           return;
         }
         sessionId = session.id;
@@ -276,10 +276,10 @@ function TerminalPane({ target, visible, shortPath, fontSize, onFontSize, onRest
     );
 
     const input = term.onData((data) => {
-      if (sessionId !== null) window.agentForge.termWrite(sessionId, data);
+      if (sessionId !== null) window.kitroom.termWrite(sessionId, data);
     });
     const resize = term.onResize(({ cols, rows }) => {
-      if (sessionId !== null) window.agentForge.termResize(sessionId, cols, rows);
+      if (sessionId !== null) window.kitroom.termResize(sessionId, cols, rows);
     });
     const observer = new ResizeObserver(() => {
       if (host.current?.offsetParent !== null) refit();
@@ -292,7 +292,7 @@ function TerminalPane({ target, visible, shortPath, fontSize, onFontSize, onRest
       input.dispose();
       resize.dispose();
       if (sessionId !== null) {
-        window.agentForge.termKill(sessionId);
+        window.kitroom.termKill(sessionId);
         handlers.delete(sessionId);
         exitHandlers.delete(sessionId);
       }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Item } from "@agent-forge/model";
+import type { Item } from "@kitroom/model";
 import type { AppSettings, Overview, UpdateInfo, WriteScope } from "../../shared/api";
 import { ItemDetail } from "./components/ItemDetail";
 import { ItemList } from "./components/ItemList";
@@ -18,7 +18,7 @@ export function App() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
 
   useEffect(() => {
-    window.agentForge.getSettings().then(setSettings, () => setSettings({ language: "system", theme: "system", terminalFontSize: 13, disabledTools: [], checkUpdates: true }));
+    window.kitroom.getSettings().then(setSettings, () => setSettings({ language: "system", theme: "system", terminalFontSize: 13, disabledTools: [], checkUpdates: true }));
   }, []);
 
   const theme = useResolvedTheme(settings?.theme ?? "system");
@@ -31,7 +31,7 @@ export function App() {
           settings={settings}
           onSettings={(next) => {
             setSettings(next);
-            void window.agentForge.saveSettings(next).then(setSettings);
+            void window.kitroom.saveSettings(next).then(setSettings);
           }}
         />
       </ThemeProvider>
@@ -57,7 +57,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
   useEffect(() => {
     if (!settings.checkUpdates) return;
     let live = true;
-    window.agentForge.checkForUpdate().then((u) => live && setUpdate(u), () => {});
+    window.kitroom.checkForUpdate().then((u) => live && setUpdate(u), () => {});
     return () => {
       live = false;
     };
@@ -71,12 +71,12 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
   const notifyOnce = (err?: string) => {
     if (notified.current) return;
     notified.current = true;
-    window.agentForge.notifyReady(err);
+    window.kitroom.notifyReady(err);
   };
 
   // Initial project from `--project <dir>`.
   useEffect(() => {
-    window.agentForge.getInfo().then(
+    window.kitroom.getInfo().then(
       (info) => setProject(info.initialProject),
       (e: unknown) => {
         setError(errorText(e));
@@ -89,7 +89,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
     setLoading(true);
     setError(null);
     try {
-      setOverview(await window.agentForge.getOverview(p));
+      setOverview(await window.kitroom.getOverview(p));
       notifyOnce();
     } catch (e) {
       setError(errorText(e));
@@ -106,7 +106,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
   // Live updates pushed by the main process when config files change on disk.
   useEffect(
     () =>
-      window.agentForge.onOverviewChanged((o) => {
+      window.kitroom.onOverviewChanged((o) => {
         if (o.project !== (projectRef.current ?? null)) return;
         setOverview(o);
         setAutoUpdatedAt(o.readAt);
@@ -132,7 +132,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
 
   async function changeScope(next: WriteScope) {
     try {
-      setScope(await window.agentForge.setWriteScope(next));
+      setScope(await window.kitroom.setWriteScope(next));
     } catch (e) {
       setError(errorText(e));
     }
@@ -144,7 +144,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
   }, [project]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function chooseProject() {
-    const dir = await window.agentForge.pickProject();
+    const dir = await window.kitroom.pickProject();
     if (dir) {
       setSelectedId(null);
       setProject(dir);
@@ -158,7 +158,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
     <div className="flex h-screen flex-col bg-neutral-950 text-sm text-neutral-200">
       {/* Top bar */}
       <header className="flex items-center gap-3 border-b border-neutral-800 px-4 py-2.5">
-        <h1 className="mr-2 text-base font-semibold tracking-tight text-neutral-100">Agent Forge</h1>
+        <h1 className="mr-2 text-base font-semibold tracking-tight text-neutral-100">Kitroom</h1>
         <div className="flex rounded-md border border-neutral-800 p-0.5">
           {views.map((v) => (
             <button
@@ -203,7 +203,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
       {update && (
         <div className="flex items-center gap-3 border-b border-sky-800 bg-sky-950/40 px-4 py-2 text-xs text-sky-300">
           <span>{t("update.available", { version: update.version })}</span>
-          <button className="hover:underline" onClick={() => window.agentForge.openExternal(update.url)}>
+          <button className="hover:underline" onClick={() => window.kitroom.openExternal(update.url)}>
             {t("update.open")}
           </button>
           <button className="ml-auto text-neutral-500 hover:text-neutral-300" onClick={() => setUpdate(null)}>

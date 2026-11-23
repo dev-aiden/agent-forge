@@ -11,7 +11,7 @@ const TIMEOUT_MS = 10_000;
 export async function checkForUpdate(current: string): Promise<UpdateInfo | null> {
   try {
     const res = await net.fetch(`https://api.github.com/repos/${RELEASES_REPO}/releases/latest`, {
-      headers: { Accept: "application/vnd.github+json", "User-Agent": "Agent-Forge-update-check" },
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "Kitroom-update-check" },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) return null;

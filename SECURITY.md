@@ -1,9 +1,9 @@
 # Security
 
-Agent Forge edits AI tool configuration on your computer, so security reports are taken seriously.
+Kitroom edits AI tool configuration on your computer, so security reports are taken seriously.
 
 **Please do not open a public issue for security problems.** Report privately through
-[GitHub Security Advisories](https://github.com/dev-aiden/agent-forge/security/advisories/new).
+[GitHub Security Advisories](https://github.com/dev-aiden/kitroom/security/advisories/new).
 
 What the app is designed never to do:
 

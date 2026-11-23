@@ -1,8 +1,8 @@
 // Types shared by main, preload and renderer. Keep this file free of runtime imports.
-import type { ChangeSet, ItemImportResult, McpImportResult, RuleImportResult, UndoResult } from "@agent-forge/adapters";
-import type { ManagedAgent, ManagedMcpServer, ManagedRule, ManagedSkill, ToolConfig, ToolId } from "@agent-forge/model";
+import type { ChangeSet, ItemImportResult, McpImportResult, RuleImportResult, UndoResult } from "@kitroom/adapters";
+import type { ManagedAgent, ManagedMcpServer, ManagedRule, ManagedSkill, ToolConfig, ToolId } from "@kitroom/model";
 
-export type { Change, ChangeSet, CommandChange, ClaudeMcpDef, ImportSkipReason, ItemImportResult, McpImportResult, RuleImportResult, UndoResult, Warning } from "@agent-forge/adapters";
+export type { Change, ChangeSet, CommandChange, ClaudeMcpDef, ImportSkipReason, ItemImportResult, McpImportResult, RuleImportResult, UndoResult, Warning } from "@kitroom/adapters";
 
 /** What the renderer sees of an apply (manifests hold secrets and stay in the main process). */
 export interface ApplySummary {
@@ -39,7 +39,7 @@ export type Theme = "system" | "light" | "dark";
 export const TERMINAL_FONT_SIZE = { min: 9, max: 28, default: 13 } as const;
 
 /** GitHub repository whose published releases the update check looks at. */
-export const RELEASES_REPO = "dev-aiden/agent-forge";
+export const RELEASES_REPO = "dev-aiden/kitroom";
 
 /** A newer release than the running app. */
 export interface UpdateInfo {
@@ -90,8 +90,8 @@ export interface Overview {
   readAt: string;
 }
 
-/** The only API the renderer can reach. Exposed by preload as `window.agentForge`. */
-export interface AgentForgeApi {
+/** The only API the renderer can reach. Exposed by preload as `window.kitroom`. */
+export interface KitroomApi {
   getInfo(): Promise<AppInfo>;
   /** Read-only snapshot of every tool's config. `project` null = global scope only. */
   getOverview(project: string | null): Promise<Overview>;
@@ -113,7 +113,7 @@ export interface AgentForgeApi {
   importSkills(): Promise<ItemImportResult>;
   saveSkill(skill: ManagedSkill, previousName?: string): Promise<ManagedSkill>;
   deleteSkill(name: string): Promise<void>;
-  /** Global rule managed by Agent Forge, or null if not managed. */
+  /** Global rule managed by Kitroom, or null if not managed. */
   getRule(): Promise<ManagedRule | null>;
   saveRule(rule: ManagedRule): Promise<ManagedRule>;
   /** Starts managing the global rule with the current CLAUDE.md / AGENTS.md. */

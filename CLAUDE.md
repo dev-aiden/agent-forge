@@ -1,4 +1,4 @@
-# Agent Forge
+# Kitroom
 
 ## 한 줄 정의
 이미 구독 중인 AI 코딩 도구(Claude Code·Codex CLI·Copilot CLI·Antigravity CLI)의 에이전트·스킬·규칙·MCP 설정을 한 화면에서 만들고 모든 도구에 적용한 뒤, 그 도구들을 한 창에서 띄워 쓰는 무료 오픈소스 데스크톱 앱 (macOS·Windows·Linux, MIT).
@@ -19,14 +19,14 @@
 - `packages/adapters`: 도구별 설정 읽기·쓰기 (`claude`, `codex`, `copilot`, `antigravity`). 도구마다 파일 하나로 분리
   - rulesync를 라이브러리로 쓸 수 있으면 변환은 rulesync에 맡기고, 어댑터는 얇게 유지한다
 - 실행 창: xterm.js(화면) + node-pty(프로세스)
-- 저장: `~/.agent-forge/` — 앱이 관리하는 에이전트·스킬 원본, 적용 전 백업
+- 저장: `~/.kitroom/` — 앱이 관리하는 에이전트·스킬 원본, 적용 전 백업
 - `gallery/`: 기본 템플릿
 - 배포: GitHub Releases(dmg·exe·AppImage) + Homebrew cask, electron-updater, GitHub Actions에서 OS별 빌드
 
 ## 데이터 출처와 규칙
 - AI API를 호출하지 않는다. API 키 입력 화면도 만들지 않는다.
 - 각 CLI의 로그인·토큰·인증 파일은 읽지도, 복사하지도, 다른 곳으로 보내지도 않는다. 실행 창은 공식 CLI 바이너리를 그대로 띄울 뿐이다.
-- 사용자 설정 파일에 쓰기 전에는 반드시 diff를 보여주고, `~/.agent-forge/backups/`에 원본을 백업한다. 되돌리기를 항상 제공한다.
+- 사용자 설정 파일에 쓰기 전에는 반드시 diff를 보여주고, `~/.kitroom/backups/`에 원본을 백업한다. 되돌리기를 항상 제공한다.
 - 도구별 경로·형식은 `packages/adapters/<tool>/paths.ts` 한 곳에 모은다. 하드코딩을 흩뿌리지 않는다.
 - 감지되지 않은 도구는 화면에서 숨긴다. 지원 도구 목록은 설정에서 끄고 켤 수 있게 한다.
 - 렌더러는 Node 접근 없이(contextIsolation) preload로 노출한 API만 쓴다.
@@ -34,7 +34,7 @@
 ## 설계 결정 (바꾸기 전에 이유를 확인할 것)
 
 ### 쓰기 파이프라인 (`packages/adapters/write/`)
-- 흐름: 앱 원본(`~/.agent-forge/source`) → rulesync를 **임시 홈을 가리키는 별도 프로세스**에서 실행 → 결과를 실제 파일과 비교한 미리보기 → 백업 → 적용 → 되돌리기
+- 흐름: 앱 원본(`~/.kitroom/source`) → rulesync를 **임시 홈을 가리키는 별도 프로세스**에서 실행 → 결과를 실제 파일과 비교한 미리보기 → 백업 → 적용 → 되돌리기
 - 쓰기 허용 폴더·파일을 제한한다(`assertWritable`). 미리보기 이후 바뀐 파일이 있으면 적용 거부, 되돌리기는 사용자가 고친 파일을 건드리지 않는다
 - 형식만 다른 마크다운(frontmatter 값·본문이 같음)은 `unchanged`로 보고 원래 파일 유지 (`sameMarkdown`)
 - 파이프라인은 텍스트 파일만 다룬다 (바이너리는 깨지므로 가져오지 않음)
@@ -65,8 +65,8 @@
 - 원본 `mcp.jsonc`와 백업은 0600. 프로젝트 `.mcp.json`에 값이 그대로 들어가면 미리보기에서 경고
 
 ### 프로젝트 단위 쓰기
-- 원본은 `~/.agent-forge/projects/<이름-해시>/`(내 컴퓨터에만), 결과 파일만 프로젝트 안에 생긴다
-- 렌더러는 "전역/이 프로젝트"만 고르고 실제 폴더는 메인 프로세스가 정한다. 홈 폴더·그 상위·`~/.agent-forge`는 프로젝트로 거부
+- 원본은 `~/.kitroom/projects/<이름-해시>/`(내 컴퓨터에만), 결과 파일만 프로젝트 안에 생긴다
+- 렌더러는 "전역/이 프로젝트"만 고르고 실제 폴더는 메인 프로세스가 정한다. 홈 폴더·그 상위·`~/.kitroom`는 프로젝트로 거부
 
 ### 템플릿 (`gallery/`)
 - `gallery/{agents,skills,rules,mcp}/` 마크다운(평평한 `key: value` frontmatter)·JSON. 파서는 `packages/model/gallery.ts`, 렌더러가 빌드 때 `import.meta.glob`으로 포함 (IPC·파일 읽기 없음)

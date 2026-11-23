@@ -22,7 +22,7 @@ async function waitForChange(since: number, timeoutMs = 8000): Promise<boolean> 
 }
 
 before(async () => {
-  root = await mkdtemp(join(tmpdir(), "agent-forge-watch-"));
+  root = await mkdtemp(join(tmpdir(), "kitroom-watch-"));
   home = join(root, "home");
   project = join(root, "project");
   await mkdir(join(home, ".claude", "agents"), { recursive: true });

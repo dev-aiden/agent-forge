@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Item, ToolConfig } from "@agent-forge/model";
+import type { Item, ToolConfig } from "@kitroom/model";
 import { useT } from "../i18n";
 import { ItemBadges } from "./Badges";
 

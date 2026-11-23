@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security issue / 보안 문제
-    url: https://github.com/dev-aiden/agent-forge/security/advisories/new
+    url: https://github.com/dev-aiden/kitroom/security/advisories/new
     about: Report privately, not as a public issue. / 공개 이슈 대신 비공개로 알려 주세요.

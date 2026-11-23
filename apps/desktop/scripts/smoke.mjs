@@ -26,9 +26,9 @@ function packagedExecutable() {
   const release = join(appDir, "release");
   const candidates = {
     // electron-builder names the x64 folder plain "mac".
-    darwin: (arch === "x64" ? ["mac"] : arch === "arm64" ? ["mac-arm64"] : ["mac-arm64", "mac", "mac-universal"]).map((d) => join(release, d, "Agent Forge.app", "Contents", "MacOS", "Agent Forge")),
-    win32: [join(release, "win-unpacked", "Agent Forge.exe"), join(release, "win-arm64-unpacked", "Agent Forge.exe")],
-    linux: [join(release, "linux-unpacked", "agent-forge"), join(release, "linux-arm64-unpacked", "agent-forge")],
+    darwin: (arch === "x64" ? ["mac"] : arch === "arm64" ? ["mac-arm64"] : ["mac-arm64", "mac", "mac-universal"]).map((d) => join(release, d, "Kitroom.app", "Contents", "MacOS", "Kitroom")),
+    win32: [join(release, "win-unpacked", "Kitroom.exe"), join(release, "win-arm64-unpacked", "Kitroom.exe")],
+    linux: [join(release, "linux-unpacked", "kitroom"), join(release, "linux-arm64-unpacked", "kitroom")],
   }[process.platform] ?? [];
   const found = candidates.find((p) => existsSync(p));
   if (!found) throw new Error(`No packaged app found. Looked in:\n  ${candidates.join("\n  ")}`);
@@ -40,8 +40,8 @@ const [cmd, cmdArgs] = packaged
   : [createRequire(import.meta.url)("electron"), [appDir, "--smoke-test", ...passthrough]];
 
 console.log(`smoke: ${cmd} ${cmdArgs.join(" ")}`);
-// Never touch the real ~/.agent-forge: run the app against an empty temporary home.
-const home = mkdtempSync(join(tmpdir(), "agent-forge-smoke-home-"));
+// Never touch the real ~/.kitroom: run the app against an empty temporary home.
+const home = mkdtempSync(join(tmpdir(), "kitroom-smoke-home-"));
 const env = { ...process.env, HOME: home, USERPROFILE: home };
 if (process.platform === "win32") {
   // Electron/Chromium on Windows needs the AppData folders under the profile.

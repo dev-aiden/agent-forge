@@ -1,4 +1,4 @@
-// Brings the current global rule / MCP servers of each tool into Agent Forge, so
+// Brings the current global rule / MCP servers of each tool into Kitroom, so
 // that applying (which replaces the whole MCP list and the root rule file) keeps
 // what the user already has.
 import { copyFile, mkdir, readdir, readFile } from "node:fs/promises";
@@ -14,7 +14,7 @@ import {
   type McpServer,
   type Skill,
   type ToolId,
-} from "@agent-forge/model";
+} from "@kitroom/model";
 import { claudePaths } from "../claude/paths";
 import { readClaude } from "../claude/read";
 import { codexPaths } from "../codex/paths";
@@ -46,7 +46,7 @@ function toManaged(s: McpServer, tool: ToolId): ManagedMcpServer {
 }
 
 /**
- * Adds servers Agent Forge does not list yet: Claude Code user scope + Codex global,
+ * Adds servers Kitroom does not list yet: Claude Code user scope + Codex global,
  * or in project scope the project's .mcp.json + .codex/config.toml.
  */
 export async function importMcp(ctx: PathContext): Promise<McpImportResult> {
@@ -238,7 +238,7 @@ export async function importSkills(ctx: PathContext): Promise<ItemImportResult> 
     ["codex", inScope((await readCodex(ctx)).skills)],
   ];
   const result: ItemImportResult = { added: [], conflicts: [], skipped: [] };
-  // Codex still reads ~/.codex/skills, but Agent Forge writes ~/.agents/skills: importing would duplicate.
+  // Codex still reads ~/.codex/skills, but Kitroom writes ~/.agents/skills: importing would duplicate.
   const legacy = codexPaths(ctx).global.legacySkillsDir;
   found[1][1] = found[1][1].filter((s) => {
     if (!s.source.path.startsWith(legacy)) return true;

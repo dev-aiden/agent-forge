@@ -2,7 +2,7 @@
 // (`claude mcp add-json -s user` / `claude mcp remove -s user`), never by writing
 // ~/.claude.json directly: that file also holds account data, and Claude Code
 // rewrites it while running.
-import type { ManagedMcpServer, McpServer } from "@agent-forge/model";
+import type { ManagedMcpServer, McpServer } from "@kitroom/model";
 import { readClaude } from "../claude/read";
 import type { PathContext } from "../types";
 
@@ -22,7 +22,7 @@ export interface CommandChange {
   action: "add" | "replace" | "remove" | "unchanged";
   before: ClaudeMcpDef | null;
   after: ClaudeMcpDef | null;
-  /** The server exists in Claude Code but not in Agent Forge's list (will be removed). */
+  /** The server exists in Claude Code but not in Kitroom's list (will be removed). */
   unmanaged: boolean;
 }
 

@@ -1,11 +1,11 @@
 {
-  "name": "@agent-forge/adapters",
+  "name": "@kitroom/adapters",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@agent-forge/model": "^0.0.0",
+    "@kitroom/model": "^0.0.0",
     "diff": "8.0.4",
     "rulesync": "43.11.0",
     "smol-toml": "^1.9.1",

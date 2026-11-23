@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { GalleryKind, GalleryTemplate } from "@agent-forge/model/gallery";
+import type { GalleryKind, GalleryTemplate } from "@kitroom/model/gallery";
 import { templatesOf } from "../gallery";
 import { useLang, useT } from "../i18n";
 

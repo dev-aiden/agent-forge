@@ -14,8 +14,8 @@ test("isNewer compares plain x.y.z versions", () => {
 });
 
 test("isReleaseUrl only accepts this repository's release pages", () => {
-  assert.ok(isReleaseUrl("https://github.com/dev-aiden/agent-forge/releases/tag/v0.1.0"));
+  assert.ok(isReleaseUrl("https://github.com/dev-aiden/kitroom/releases/tag/v0.1.0"));
   assert.ok(!isReleaseUrl("https://github.com/someone/else/releases/tag/v1"));
-  assert.ok(!isReleaseUrl("https://evil.example/https://github.com/dev-aiden/agent-forge/releases/"));
+  assert.ok(!isReleaseUrl("https://evil.example/https://github.com/dev-aiden/kitroom/releases/"));
   assert.ok(!isReleaseUrl(42));
 });

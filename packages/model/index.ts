@@ -168,9 +168,9 @@ export function maskToolConfig(config: ToolConfig): ToolConfig {
 }
 
 // ---------------------------------------------------------------------------
-// App-managed items (stored in ~/.agent-forge/source as a rulesync source tree)
+// App-managed items (stored in ~/.kitroom/source as a rulesync source tree)
 
-/** An agent created in Agent Forge and applied to the selected tools. */
+/** An agent created in Kitroom and applied to the selected tools. */
 export interface ManagedAgent {
   /** File-safe identifier: letters, digits, `-` and `_`. Also the output file name. */
   name: string;
@@ -194,10 +194,10 @@ export interface ManagedAgent {
 
 export const MANAGED_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 
-/** Tools Agent Forge can write agents to so far. */
+/** Tools Kitroom can write agents to so far. */
 export const WRITABLE_AGENT_TOOLS: readonly ToolId[] = ["claude", "codex"];
 
-/** A skill created in Agent Forge (SKILL.md only for now). */
+/** A skill created in Kitroom (SKILL.md only for now). */
 export interface ManagedSkill {
   /** File-safe identifier; also the skill folder name. */
   name: string;
@@ -220,7 +220,7 @@ export const RESERVED_SKILL_NAMES: readonly string[] = ["synced"];
 
 export type ManagedKind = "agent" | "skill";
 
-/** An MCP server managed by Agent Forge (global scope). */
+/** An MCP server managed by Kitroom (global scope). */
 export interface ManagedMcpServer {
   name: string;
   transport: McpTransport;
@@ -239,7 +239,7 @@ export interface ManagedMcpServer {
   codexExtra?: Record<string, unknown>;
 }
 
-/** The global top-level instructions (CLAUDE.md / AGENTS.md) managed by Agent Forge. */
+/** The global top-level instructions (CLAUDE.md / AGENTS.md) managed by Kitroom. */
 export interface ManagedRule {
   body: string;
   targets: ToolId[];

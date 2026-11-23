@@ -1,9 +1,9 @@
 // App-managed global rule and MCP servers, stored as a rulesync source tree:
 //
-//   ~/.agent-forge/source/rules/root.md   global top-level instructions (root rule)
-//   ~/.agent-forge/source/mcp.jsonc       MCP servers (contains secrets → mode 0600)
+//   ~/.kitroom/source/rules/root.md   global top-level instructions (root rule)
+//   ~/.kitroom/source/mcp.jsonc       MCP servers (contains secrets → mode 0600)
 //
-// A missing file means "not managed by Agent Forge": nothing is generated for it.
+// A missing file means "not managed by Kitroom": nothing is generated for it.
 import { chmod, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { stringify as stringifyYaml } from "yaml";
@@ -18,7 +18,7 @@ import {
   type ManagedRule,
   type McpTransport,
   type ToolId,
-} from "@agent-forge/model";
+} from "@kitroom/model";
 import { Reader, splitFrontmatter, str, stringList, stringRecord } from "../shared/read-utils";
 import type { PathContext } from "../types";
 import { forgePaths, writeFileAtomic } from "./store";
@@ -71,7 +71,7 @@ export async function unmanageRule(ctx: PathContext): Promise<void> {
 // ---------------------------------------------------------------------------
 // MCP servers
 
-/** Keys Agent Forge models itself; everything else in an entry is Codex-only extra. */
+/** Keys Kitroom models itself; everything else in an entry is Codex-only extra. */
 const OWNED_KEYS = new Set(["type", "command", "args", "env", "url", "headers", "targets", "disabled"]);
 /** Codex keys never passed through: rulesync keeps `tools` from the real config.toml, the rest are modeled. */
 const NOT_EXTRA = new Set(["command", "args", "env", "url", "http_headers", "tools", "__proto__", "constructor", "prototype"]);
@@ -119,7 +119,7 @@ function fromRulesyncEntry(name: string, v: unknown): ManagedMcpServer | null {
   };
 }
 
-/** Managed MCP servers, or null when Agent Forge does not manage MCP yet. Values are NOT masked. */
+/** Managed MCP servers, or null when Kitroom does not manage MCP yet. Values are NOT masked. */
 export async function readManagedMcp(ctx: PathContext): Promise<ManagedMcpServer[] | null> {
   const r = new Reader();
   const data = (await r.json(configPaths(ctx).mcp)) as { mcpServers?: Record<string, unknown> } | undefined;

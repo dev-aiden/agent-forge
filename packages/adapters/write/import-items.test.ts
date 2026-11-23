@@ -20,9 +20,9 @@ async function put(path: string, content: string) {
 }
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "agent-forge-import-"));
+  root = await mkdtemp(join(tmpdir(), "kitroom-import-"));
   home = join(root, "home");
-  ctx = { home, project: "", env: { AGENT_FORGE_HOME: join(root, "forge") } };
+  ctx = { home, project: "", env: { KITROOM_HOME: join(root, "forge") } };
 });
 
 afterEach(() => rm(root, { recursive: true, force: true }));
@@ -166,4 +166,24 @@ test("skips items that would be duplicated or lose fields", async () => {
     { name: "other", reason: "file-name-differs" },
     { name: "tagged", reason: "unsupported-fields" },
   ]);
+});
+
+test("migrateLegacyHome moves ~/.agent-forge to ~/.kitroom once", async () => {
+  const { mkdtemp, mkdir, writeFile, readFile, stat } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { migrateLegacyHome } = await import("./store");
+  const home = await mkdtemp(join(tmpdir(), "kitroom-migrate-"));
+  const ctx = { home, project: "", env: {} };
+  assert.equal(await migrateLegacyHome(ctx), false); // nothing to move
+  await mkdir(join(home, ".agent-forge", "backups", "x"), { recursive: true });
+  await writeFile(join(home, ".agent-forge", "settings.json"), "{}");
+  assert.equal(await migrateLegacyHome(ctx), true);
+  assert.equal(await readFile(join(home, ".kitroom", "settings.json"), "utf8"), "{}");
+  assert.ok((await stat(join(home, ".kitroom", "backups", "x"))).isDirectory());
+  await assert.rejects(stat(join(home, ".agent-forge")));
+  // Never overwrite an existing ~/.kitroom.
+  await mkdir(join(home, ".agent-forge"));
+  assert.equal(await migrateLegacyHome(ctx), false);
+  assert.equal(await migrateLegacyHome({ ...ctx, env: { KITROOM_HOME: join(home, "custom") } }), false);
 });

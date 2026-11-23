@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { WRITABLE_AGENT_TOOLS, type ManagedAgent, type ManagedKind, type ManagedSkill, type ToolId } from "@agent-forge/model";
-import { uniqueName, type GalleryTemplate } from "@agent-forge/model/gallery";
+import { WRITABLE_AGENT_TOOLS, type ManagedAgent, type ManagedKind, type ManagedSkill, type ToolId } from "@kitroom/model";
+import { uniqueName, type GalleryTemplate } from "@kitroom/model/gallery";
 import { useApplyFlow } from "../apply-flow";
 import { Badge } from "../components/Badges";
 import { Field, TargetPicker, TOOL_LABEL } from "../components/Form";
@@ -39,7 +39,7 @@ function fromDraft(kind: ManagedKind, d: Draft): Managed {
 
 const show = (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v));
 
-/** Fields and files Agent Forge keeps but does not edit (from imported items). */
+/** Fields and files Kitroom keeps but does not edit (from imported items). */
 function keptOf(item: Managed | undefined): { extras: string[]; files: string[] } | null {
   if (!item) return null;
   const lines = (prefix: string, r?: Record<string, unknown>) => Object.entries(r ?? {}).map(([k, v]) => `${prefix}${k}: ${show(v)}`);
@@ -57,7 +57,7 @@ function keptOf(item: Managed | undefined): { extras: string[]; files: string[] 
 
 /** Per-kind data functions and labels. */
 function kindConfig(kind: ManagedKind) {
-  const api = window.agentForge;
+  const api = window.kitroom;
   return kind === "agent"
     ? {
         list: () => api.listAgents() as Promise<Managed[]>,

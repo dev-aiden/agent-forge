@@ -15,7 +15,7 @@ async function put(path: string, content: string) {
 }
 
 before(async () => {
-  root = await mkdtemp(join(tmpdir(), "agent-forge-overview-"));
+  root = await mkdtemp(join(tmpdir(), "kitroom-overview-"));
   home = join(root, "home");
   project = join(root, "project");
   await mkdir(project, { recursive: true });

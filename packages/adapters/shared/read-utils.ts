@@ -15,7 +15,7 @@ import type {
   Source,
   SourceFormat,
   ToolId,
-} from "@agent-forge/model";
+} from "@kitroom/model";
 import { antigravity } from "../antigravity/paths";
 import { claude } from "../claude/paths";
 import { codex } from "../codex/paths";

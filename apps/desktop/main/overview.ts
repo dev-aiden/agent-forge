@@ -2,8 +2,8 @@
 import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute } from "node:path";
-import { READERS, scan, type PathContext } from "@agent-forge/adapters";
-import { maskToolConfig } from "@agent-forge/model";
+import { READERS, scan, type PathContext } from "@kitroom/adapters";
+import { maskToolConfig } from "@kitroom/model";
 import type { Overview, ToolOverview } from "../shared/api";
 
 /** Identity of an overview ignoring the read time, used to skip no-op updates. */

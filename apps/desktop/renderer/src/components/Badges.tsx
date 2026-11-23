@@ -1,4 +1,4 @@
-import type { Item } from "@agent-forge/model";
+import type { Item } from "@kitroom/model";
 import { SCOPE_STYLE } from "../format";
 import { useT } from "../i18n";
 

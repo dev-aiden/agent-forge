@@ -3,9 +3,9 @@
 // 1. preview: rulesync generates into a throw-away staging home (separate process).
 //    Staged files are compared with the real ones. Nothing real is touched.
 //    Shared files rulesync merges into (Codex config.toml) are copied into the
-//    staging home first, so keys Agent Forge does not manage are preserved.
+//    staging home first, so keys Kitroom does not manage are preserved.
 // 2. apply:   re-checks that nothing changed since the preview, backs up originals
-//    to ~/.agent-forge/backups/<id>/, writes files atomically, then runs the
+//    to ~/.kitroom/backups/<id>/, writes files atomically, then runs the
 //    planned Claude Code CLI commands for MCP servers.
 // 3. undo:    restores the backup / runs the reverse commands. Anything the user
 //    changed after the apply is kept.
@@ -17,7 +17,7 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { parse as parseYaml } from "yaml";
-import { RULESYNC_TARGET, WRITABLE_AGENT_TOOLS } from "@agent-forge/model";
+import { RULESYNC_TARGET, WRITABLE_AGENT_TOOLS } from "@kitroom/model";
 import { claudePaths } from "../claude/paths";
 import { codexPaths } from "../codex/paths";
 import { isSensitive } from "../shared/read-utils";
@@ -90,7 +90,7 @@ export interface Change {
   after: string | null;
   /** sha256 of `before` (null = file did not exist). Checked again at apply time. */
   beforeHash: string | null;
-  /** The file exists but was not written by Agent Forge (it will be replaced). */
+  /** The file exists but was not written by Kitroom (it will be replaced). */
   unmanagedOverwrite: boolean;
   /** Only part of a shared file changes; other settings in it are kept. */
   merged: boolean;
@@ -100,7 +100,7 @@ export type Warning =
   | {
       kind: "unmanaged-mcp";
       tool: "claude" | "codex";
-      /** MCP servers configured in the tool but not in Agent Forge: applying removes them. */
+      /** MCP servers configured in the tool but not in Kitroom: applying removes them. */
       names: string[];
     }
   | {
@@ -183,8 +183,8 @@ function inside(child: string, parent: string): boolean {
 const isProject = (ctx: PathContext) => ctx.project !== "";
 
 /**
- * A project folder Agent Forge may write into. Refuses the home folder and its
- * parents (project paths would then hit the global config) and Agent Forge's own folder.
+ * A project folder Kitroom may write into. Refuses the home folder and its
+ * parents (project paths would then hit the global config) and Kitroom's own folder.
  */
 export function assertProjectAllowed(ctx: PathContext): void {
   if (!isProject(ctx)) return;
@@ -192,7 +192,7 @@ export function assertProjectAllowed(ctx: PathContext): void {
   if (!isAbsolute(p) || resolve(p) !== p) throw new Error(`invalid project folder: ${p}`);
   const home = resolve(ctx.home);
   if (p === home || inside(home, p)) throw new Error("Choose a project folder inside your home folder, not the home folder itself.");
-  if (p === forgePaths(ctx).root || inside(p, forgePaths(ctx).root)) throw new Error("This folder belongs to Agent Forge.");
+  if (p === forgePaths(ctx).root || inside(p, forgePaths(ctx).root)) throw new Error("This folder belongs to Kitroom.");
 }
 
 /** Folders holding one file per app-managed item. Files here may be created and deleted. */
@@ -203,7 +203,7 @@ export function writableRoots(ctx: PathContext): string[] {
   return [claude.agentsDir, claude.skillsDir, codex.agentsDir, codex.skillsDir];
 }
 
-/** Individual shared files Agent Forge may update (never delete). */
+/** Individual shared files Kitroom may update (never delete). */
 export function writableFiles(ctx: PathContext): string[] {
   if (isProject(ctx)) {
     const claude = claudePaths(ctx).project;
@@ -283,7 +283,7 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
 
   // Generate into a staging home that rulesync treats as "~" (and a staging
   // project folder in project scope). Nothing real is written here.
-  const stagingRoot = await mkdtemp(join(tmpdir(), "agent-forge-stage-"));
+  const stagingRoot = await mkdtemp(join(tmpdir(), "kitroom-stage-"));
   try {
     const stagingHome = join(stagingRoot, "home");
     const work = join(stagingRoot, "work");
@@ -316,8 +316,8 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
       await runners.worker({
         cwd: project ? stagingOut : work,
         env: {
-          AGENT_FORGE_JOB: JSON.stringify(job),
-          AGENT_FORGE_RESULT: resultPath,
+          KITROOM_JOB: JSON.stringify(job),
+          KITROOM_RESULT: resultPath,
           HOME: stagingHome,
           HOME_DIR: stagingHome,
           USERPROFILE: stagingHome,
@@ -361,7 +361,7 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
       });
     }
 
-    // Item files Agent Forge wrote earlier that are no longer produced → remove them,
+    // Item files Kitroom wrote earlier that are no longer produced → remove them,
     // unless the user edited them since. Shared files are never deleted.
     for (const [path, hash] of Object.entries(state.managed)) {
       if (produced.has(path) || !isItemFile(ctx, path)) continue;

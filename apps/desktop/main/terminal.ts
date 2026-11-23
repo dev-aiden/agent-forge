@@ -7,7 +7,7 @@
 import { clipboard, ipcMain, shell, type IpcMainInvokeEvent, type WebContents } from "electron";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { TOOL_IDS, type ToolId } from "@agent-forge/model";
+import { TOOL_IDS, type ToolId } from "@kitroom/model";
 import type { IPty } from "node-pty";
 import { IPC, type LaunchTarget, type TerminalSession } from "../shared/api";
 import { cliEnv, findCli } from "./shell-env";

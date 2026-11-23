@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import type { ManagedRule } from "@agent-forge/model";
+import type { ManagedRule } from "@kitroom/model";
 import { useApplyFlow } from "../apply-flow";
-import type { GalleryTemplate } from "@agent-forge/model/gallery";
+import type { GalleryTemplate } from "@kitroom/model/gallery";
 import { Field, TargetPicker, TOOL_LABEL } from "../components/Form";
 import { TemplatePicker } from "../components/TemplatePicker";
 import { errorText } from "../format";
@@ -17,7 +17,7 @@ export function RulesView({ shortPath }: { shortPath(path: string): string }) {
   const lang = useLang();
 
   const load = useCallback(async () => {
-    const r = await window.agentForge.getRule();
+    const r = await window.kitroom.getRule();
     setRule(r);
     setDraft(r);
   }, []);
@@ -30,7 +30,7 @@ export function RulesView({ shortPath }: { shortPath(path: string): string }) {
 
   async function startManaging() {
     try {
-      const r = await window.agentForge.importRule();
+      const r = await window.kitroom.importRule();
       await load();
       flow.setNotice({
         text: [r.from ? t("rules.imported", { tool: TOOL_LABEL[r.from] }) : t("rules.importedEmpty"), r.differs ? t("rules.differs") : ""]
@@ -60,7 +60,7 @@ export function RulesView({ shortPath }: { shortPath(path: string): string }) {
   async function save() {
     if (!draft) return;
     try {
-      const saved = await window.agentForge.saveRule(draft);
+      const saved = await window.kitroom.saveRule(draft);
       setRule(saved);
       setDraft(saved);
       flow.setNotice({ text: t("rules.saved") });
@@ -71,7 +71,7 @@ export function RulesView({ shortPath }: { shortPath(path: string): string }) {
 
   async function stop() {
     if (!confirm(t("rules.unmanageConfirm"))) return;
-    await window.agentForge.unmanageRule();
+    await window.kitroom.unmanageRule();
     await load();
   }
 

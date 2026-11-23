@@ -1,6 +1,6 @@
 // Reads Codex CLI rules, agents, skills and MCP servers into the common model. Read-only.
 import { basename } from "node:path";
-import type { Agent, McpServer, Rule, Source, ToolConfig } from "@agent-forge/model";
+import type { Agent, McpServer, Rule, Source, ToolConfig } from "@kitroom/model";
 import type { PathContext } from "../types";
 import {
   byName,

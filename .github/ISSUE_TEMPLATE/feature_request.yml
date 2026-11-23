@@ -16,5 +16,5 @@ body:
   - type: markdown
     attributes:
       value: |
-        Agent Forge never calls AI APIs itself, never handles CLI logins or tokens, and runs only on your computer (no accounts, no cloud sync).
-        Agent Forge는 AI를 직접 호출하지 않고, 로그인·토큰을 다루지 않으며, 내 컴퓨터 안에서만 동작합니다 (계정·클라우드 동기화 없음).
+        Kitroom never calls AI APIs itself, never handles CLI logins or tokens, and runs only on your computer (no accounts, no cloud sync).
+        Kitroom은 AI를 직접 호출하지 않고, 로그인·토큰을 다루지 않으며, 내 컴퓨터 안에서만 동작합니다 (계정·클라우드 동기화 없음).

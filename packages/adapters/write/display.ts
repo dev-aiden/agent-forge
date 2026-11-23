@@ -2,7 +2,7 @@
 // MCP config masked. The real ChangeSet stays in the main process.
 import { basename } from "node:path";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
-import { MASK, maskArgs, maskUrl } from "@agent-forge/model";
+import { MASK, maskArgs, maskUrl } from "@kitroom/model";
 import type { ClaudeMcpDef } from "./claude-mcp";
 import type { ChangeSet } from "./pipeline";
 
@@ -61,7 +61,7 @@ export function maskMcpJson(text: string | null): string | null {
 }
 
 /**
- * Which masker a tool file needs, by name. The only config.toml Agent Forge writes is
+ * Which masker a tool file needs, by name. The only config.toml Kitroom writes is
  * Codex's (its folder may be $CODEX_HOME), and the only .mcp.json is Claude Code's.
  */
 function maskerFor(path: string): ((text: string | null) => string | null) | null {

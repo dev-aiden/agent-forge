@@ -1,6 +1,6 @@
 # Packaging config. Code signing / notarization and auto-update come later.
-appId: io.github.devaiden.agentforge
-productName: Agent Forge
+appId: io.github.devaiden.kitroom
+productName: Kitroom
 copyright: Copyright (c) 2026 dev-aiden
 directories:
   output: release
@@ -15,7 +15,7 @@ asar: true
 asarUnpack:
   - "**/node_modules/node-pty/**"
 npmRebuild: false
-artifactName: agent-forge-${version}-${os}-${arch}.${ext}
+artifactName: kitroom-${version}-${os}-${arch}.${ext}
 mac:
   # Apple Silicon and Intel get separate DMGs (node-pty ships prebuilds for both).
   target:
@@ -30,6 +30,6 @@ nsis:
   allowToChangeInstallationDirectory: true
 linux:
   target: AppImage
-  executableName: agent-forge
+  executableName: kitroom
   category: Development
 publish: null

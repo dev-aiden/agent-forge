@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import type { ToolConfig } from "@agent-forge/model";
+import type { ToolConfig } from "@kitroom/model";
 import { readCopilot } from "./read";
 
 let root: string, home: string, project: string;
@@ -15,7 +15,7 @@ async function put(path: string, content: string) {
 }
 
 before(async () => {
-  root = await mkdtemp(join(tmpdir(), "agent-forge-copilot-"));
+  root = await mkdtemp(join(tmpdir(), "kitroom-copilot-"));
   home = join(root, "home");
   project = join(root, "project");
   const c = join(home, ".copilot");

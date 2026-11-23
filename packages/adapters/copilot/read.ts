@@ -1,6 +1,6 @@
 // Reads GitHub Copilot CLI rules, agents, skills and MCP servers into the common model. Read-only.
 // Paths are documented but unverified on a real install, so every item is marked unverified.
-import type { Agent, McpServer, Rule, Source, ToolConfig } from "@agent-forge/model";
+import type { Agent, McpServer, Rule, Source, ToolConfig } from "@kitroom/model";
 import type { PathContext } from "../types";
 import { byName, mcpFromJson, readMarkdownAgents, readRootRule, readRulesDir, readSkillsDir, Reader, source } from "../shared/read-utils";
 import { copilotPaths } from "./paths";

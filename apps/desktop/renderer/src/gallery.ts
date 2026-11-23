@@ -1,5 +1,5 @@
 // Starter templates from the repo's gallery/ folder, bundled at build time.
-import { loadGallery, type GalleryKind, type GalleryTemplate } from "@agent-forge/model/gallery";
+import { loadGallery, type GalleryKind, type GalleryTemplate } from "@kitroom/model/gallery";
 
 const files = import.meta.glob("../../../../gallery/*/*.{md,json}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 

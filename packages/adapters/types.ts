@@ -1,5 +1,5 @@
 // Shared types for adapter path definitions and the read-only scanner.
-import type { Scope, ToolId } from "@agent-forge/model";
+import type { Scope, ToolId } from "@kitroom/model";
 
 export type { Scope, ToolId };
 

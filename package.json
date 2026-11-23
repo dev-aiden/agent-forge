@@ -1,5 +1,5 @@
 {
-  "name": "agent-forge",
+  "name": "kitroom",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -10,9 +10,9 @@
   "scripts": {
     "scan": "tsx packages/adapters/scripts/scan.ts",
     "test": "tsx --test \"packages/**/*.test.ts\" \"apps/desktop/main/*.test.ts\"",
-    "typecheck": "tsc --noEmit && npm run typecheck -w @agent-forge/desktop",
-    "dev": "npm run dev -w @agent-forge/desktop",
-    "smoke": "npm run smoke -w @agent-forge/desktop",
+    "typecheck": "tsc --noEmit && npm run typecheck -w @kitroom/desktop",
+    "dev": "npm run dev -w @kitroom/desktop",
+    "smoke": "npm run smoke -w @kitroom/desktop",
     "read": "tsx packages/adapters/scripts/read.ts",
     "postinstall": "node scripts/fix-node-pty.mjs"
   },
