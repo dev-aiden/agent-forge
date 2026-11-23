@@ -79,17 +79,19 @@ export function toRulesyncAgent(agent: ManagedAgent): string {
     description: agent.description,
     targets: agent.targets.map((t) => RULESYNC_TARGET[t]),
   };
-  const claude: Record<string, unknown> = {};
+  const claude: Record<string, unknown> = { ...agent.claudeExtra };
   if (agent.model) claude.model = agent.model;
   if (agent.tools?.length) claude.tools = agent.tools.join(", ");
   if (Object.keys(claude).length) front.claudecode = claude;
+  if (agent.codexExtra && Object.keys(agent.codexExtra).length) front.codexcli = agent.codexExtra;
   const body = agent.body.endsWith("\n") ? agent.body : `${agent.body}\n`;
   return `---\n${stringifyYaml(front)}---\n${body}`;
 }
 
 function fromRulesyncAgent(reader: Reader, path: string, text: string): ManagedAgent {
   const { data, body } = splitFrontmatter(reader, path, text);
-  const claude = (data.claudecode ?? {}) as Record<string, unknown>;
+  const { model, tools, ...claudeExtra } = (data.claudecode ?? {}) as Record<string, unknown>;
+  const codexExtra = (data.codexcli ?? {}) as Record<string, unknown>;
   const targets = (stringList(data.targets) ?? [])
     .map((t) => RULESYNC_TO_TOOL[t])
     .filter((t): t is ToolId => Boolean(t));
@@ -97,9 +99,11 @@ function fromRulesyncAgent(reader: Reader, path: string, text: string): ManagedA
     name: str(data.name) ?? "",
     description: str(data.description) ?? "",
     body,
-    model: str(claude.model),
-    tools: stringList(claude.tools),
+    model: str(model),
+    tools: stringList(tools),
     targets,
+    ...(Object.keys(claudeExtra).length ? { claudeExtra } : {}),
+    ...(Object.keys(codexExtra).length ? { codexExtra } : {}),
   };
 }
 
@@ -124,11 +128,22 @@ function normalize(agent: ManagedAgent): ManagedAgent {
     model: agent.model?.trim() || undefined,
     tools: tools?.length ? tools : undefined,
     targets,
+    ...(agent.claudeExtra && Object.keys(agent.claudeExtra).length ? { claudeExtra: agent.claudeExtra } : {}),
+    ...(agent.codexExtra && Object.keys(agent.codexExtra).length ? { codexExtra: agent.codexExtra } : {}),
   };
 }
 
-/** Creates or updates an agent. `previousName` renames an existing one. */
+/**
+ * Creates or updates an agent. `previousName` renames an existing one.
+ * Tool-specific extras cannot be set from the app: they are kept from the stored agent.
+ */
 export async function saveAgent(ctx: PathContext, input: ManagedAgent, previousName?: string): Promise<ManagedAgent> {
+  const stored = previousName === undefined ? undefined : (await listAgents(ctx)).find((a) => a.name === previousName);
+  return writeAgent(ctx, { ...input, claudeExtra: stored?.claudeExtra, codexExtra: stored?.codexExtra }, previousName);
+}
+
+/** Saves an agent including its extras (used by import). */
+export async function writeAgent(ctx: PathContext, input: ManagedAgent, previousName?: string): Promise<ManagedAgent> {
   const agent = normalize(input);
   assertValidName(agent.name);
   if (!agent.description) throw new Error("Description is required.");
@@ -163,6 +178,7 @@ function assertValidSkillName(name: string): void {
 /** Serializes to the rulesync skill format (SKILL.md with frontmatter). */
 export function toRulesyncSkill(skill: ManagedSkill): string {
   const front = {
+    ...skill.extra,
     name: skill.name,
     description: skill.description,
     targets: skill.targets.map((t) => RULESYNC_TARGET[t]),
@@ -181,22 +197,48 @@ export async function listSkills(ctx: PathContext): Promise<ManagedSkill[]> {
     const text = await reader.text(path);
     if (text === null) continue;
     const { data, body } = splitFrontmatter(reader, path, text);
+    const { name, description, targets, ...extra } = data;
+    const files = await bundledFiles(entry.path);
     out.push({
-      name: str(data.name) ?? entry.name,
-      description: str(data.description) ?? "",
+      name: str(name) ?? entry.name,
+      description: str(description) ?? "",
       body,
-      targets: (stringList(data.targets) ?? []).map((t) => RULESYNC_TO_TOOL[t]).filter((t): t is ToolId => Boolean(t)),
+      targets: (stringList(targets) ?? []).map((t) => RULESYNC_TO_TOOL[t]).filter((t): t is ToolId => Boolean(t)),
+      ...(Object.keys(extra).length ? { extra } : {}),
+      ...(files.length ? { files } : {}),
     });
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Files in a skill folder besides SKILL.md, as sorted relative POSIX paths. */
+async function bundledFiles(dir: string): Promise<string[]> {
+  const out: string[] = [];
+  for (const e of await readdir(dir, { withFileTypes: true, recursive: true }).catch(() => [])) {
+    if (!e.isFile() || e.name === ".DS_Store") continue;
+    const rel = join(e.parentPath, e.name).slice(dir.length + 1).replaceAll("\\", "/");
+    if (rel !== "SKILL.md") out.push(rel);
+  }
+  return out.sort();
+}
+
+/**
+ * Creates or updates a skill. Frontmatter extras and bundled files cannot be set
+ * from the app: they are kept from the stored skill (and move with a rename).
+ */
 export async function saveSkill(ctx: PathContext, input: ManagedSkill, previousName?: string): Promise<ManagedSkill> {
+  const stored = previousName === undefined ? undefined : (await listSkills(ctx)).find((s) => s.name === previousName);
+  return writeSkill(ctx, { ...input, extra: stored?.extra }, previousName);
+}
+
+/** Saves a skill including its frontmatter extras (used by import). Bundled files are copied separately. */
+export async function writeSkill(ctx: PathContext, input: ManagedSkill, previousName?: string): Promise<ManagedSkill> {
   const skill: ManagedSkill = {
     name: input.name.trim(),
     description: input.description.trim(),
     body: input.body,
     targets: [...new Set(input.targets)].filter((t) => WRITABLE_AGENT_TOOLS.includes(t)),
+    ...(input.extra && Object.keys(input.extra).length ? { extra: input.extra } : {}),
   };
   assertValidSkillName(skill.name);
   if (!skill.description) throw new Error("Description is required.");
@@ -208,9 +250,16 @@ export async function saveSkill(ctx: PathContext, input: ManagedSkill, previousN
   if (existing.some((s) => s.name.toLowerCase() === skill.name.toLowerCase() && s.name !== previousName)) {
     throw new Error(`A skill named "${skill.name}" already exists.`);
   }
+  // Rename moves the whole folder so bundled files come along.
+  if (previousName && previousName !== skill.name) {
+    await mkdir(skills, { recursive: true });
+    await rename(join(skills, previousName), join(skills, skill.name)).catch((e: NodeJS.ErrnoException) => {
+      if (e.code !== "ENOENT") throw e;
+    });
+  }
   await writeFileAtomic(join(skills, skill.name, "SKILL.md"), toRulesyncSkill(skill));
-  if (previousName && previousName !== skill.name) await rm(join(skills, previousName), { recursive: true, force: true });
-  return skill;
+  const files = await bundledFiles(join(skills, skill.name));
+  return files.length ? { ...skill, files } : skill;
 }
 
 export async function deleteSkill(ctx: PathContext, name: string): Promise<void> {

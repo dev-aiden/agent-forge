@@ -183,6 +183,13 @@ export interface ManagedAgent {
   tools?: string[];
   /** Tools to apply this agent to. */
   targets: ToolId[];
+  /**
+   * Other Claude Code frontmatter fields kept from an imported agent (color,
+   * permissionMode, hooks, ...). Not editable in the app; kept on save.
+   */
+  claudeExtra?: Record<string, unknown>;
+  /** Other Codex agent TOML fields kept from an imported agent (model, sandbox_mode, ...). */
+  codexExtra?: Record<string, unknown>;
 }
 
 export const MANAGED_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
@@ -199,6 +206,13 @@ export interface ManagedSkill {
   /** SKILL.md body. */
   body: string;
   targets: ToolId[];
+  /**
+   * Other frontmatter kept from an imported skill, in rulesync form (top-level
+   * keys like `license`, and a `claudecode` section). Not editable; kept on save.
+   */
+  extra?: Record<string, unknown>;
+  /** Files bundled with the skill besides SKILL.md (relative paths). Read-only, kept on save. */
+  files?: string[];
 }
 
 /** Names that would collide with folders managed by the tools themselves. */

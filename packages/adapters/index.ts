@@ -52,6 +52,15 @@ export {
   unmanageMcp,
   unmanageRule,
 } from "./write/config-store";
-export { importMcp, importRule, type McpImportResult, type RuleImportResult } from "./write/import";
+export {
+  importAgents,
+  importMcp,
+  importRule,
+  importSkills,
+  type ImportSkipReason,
+  type ItemImportResult,
+  type McpImportResult,
+  type RuleImportResult,
+} from "./write/import";
 export { displayChangeSet } from "./write/display";
 export { deleteAgent, deleteSkill, forgeHome, listAgents, listSkills, saveAgent, saveSkill, writeFileAtomic } from "./write/store";

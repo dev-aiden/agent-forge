@@ -24,9 +24,11 @@ const api: AgentForgeApi = {
     };
   },
   listAgents: () => ipcRenderer.invoke(IPC.listAgents),
+  importAgents: () => ipcRenderer.invoke(IPC.importAgents),
   saveAgent: (agent, previousName) => ipcRenderer.invoke(IPC.saveAgent, agent, previousName),
   deleteAgent: (name) => ipcRenderer.invoke(IPC.deleteAgent, name),
   listSkills: () => ipcRenderer.invoke(IPC.listSkills),
+  importSkills: () => ipcRenderer.invoke(IPC.importSkills),
   saveSkill: (skill, previousName) => ipcRenderer.invoke(IPC.saveSkill, skill, previousName),
   deleteSkill: (name) => ipcRenderer.invoke(IPC.deleteSkill, name),
   getRule: () => ipcRenderer.invoke(IPC.getRule),

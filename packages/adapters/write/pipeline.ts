@@ -15,6 +15,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { copyFile, mkdir, mkdtemp, readFile, rm, rmdir, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
+import { parse as parseYaml } from "yaml";
 import { RULESYNC_TARGET, WRITABLE_AGENT_TOOLS } from "@agent-forge/model";
 import { claudePaths } from "../claude/paths";
 import { codexPaths } from "../codex/paths";
@@ -40,6 +42,21 @@ import {
   writeFileAtomic,
   writeState,
 } from "./store";
+
+const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
+
+/** True if two Markdown files have equal frontmatter data and the same body. */
+export function sameMarkdown(a: string, b: string): boolean {
+  const ma = FRONTMATTER.exec(a);
+  const mb = FRONTMATTER.exec(b);
+  if (!ma || !mb) return false;
+  if (ma[2]!.replace(/\r\n/g, "\n").trimEnd() !== mb[2]!.replace(/\r\n/g, "\n").trimEnd()) return false;
+  try {
+    return isDeepStrictEqual(parseYaml(ma[1]!), parseYaml(mb[1]!));
+  } catch {
+    return false;
+  }
+}
 
 /** Starts the rulesync worker with the given env and cwd; resolves when it exits with code 0. */
 export type WorkerRunner = (job: { env: Record<string, string>; cwd: string }) => Promise<void>;
@@ -316,8 +333,11 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
       assertWritable(ctx, path);
       produced.add(path);
 
-      const after = await readFile(staged, "utf8");
+      let after = await readFile(staged, "utf8");
       const before = await readOrNull(path);
+      // Same frontmatter values and body, only formatted differently (key order, quotes):
+      // keep the user's file as it is instead of rewriting it.
+      if (before !== null && before !== after && isItemFile(ctx, path) && sameMarkdown(before, after)) after = before;
       if (before === null && after.trim() === "") continue; // nothing worth creating
       const beforeHash = before === null ? null : sha256(before);
       const isMerged = merged.has(path);

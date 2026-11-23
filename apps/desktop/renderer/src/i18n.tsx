@@ -145,6 +145,25 @@ const en = {
   "rules.unmanage": "Stop managing",
   "rules.unmanageConfirm": "Stop managing these rules? Your tool files stay as they are.",
 
+  // import existing agents / skills
+  "import.button": "Import",
+  "import.tip": "Bring in what Claude Code and Codex already have, so Agent Forge can manage it",
+  "import.startAgents": "Import my current agents",
+  "import.startSkills": "Import my current skills",
+  "import.result": "Imported {n}: {names}.",
+  "import.none": "Nothing new to import.",
+  "import.conflicts": "Claude Code and Codex had different versions of {names}. Claude Code's was kept; applying updates Codex.",
+  "import.skipped": "Not imported: {list}.",
+  "import.reason.invalid-name": "name not allowed",
+  "import.reason.no-description": "no description",
+  "import.reason.codex-ui-file": "has Codex UI settings (agents/openai.yaml)",
+  "import.reason.too-large": "too many or too large files",
+  "import.reason.symlink": "contains links",
+  "import.reason.legacy-location": "old location ~/.codex/skills",
+  "import.reason.binary-file": "contains non-text files (images, ...)",
+  "import.extras": "Other settings (kept as they are, not editable here)",
+  "import.files": "Bundled files (kept as they are)",
+
   // gallery
   "gallery.button": "Templates",
   "gallery.startFrom": "Start from a template",
@@ -383,6 +402,25 @@ const ko: Messages = {
   "rules.saved": "저장했습니다. 도구에 쓰려면 \"미리보기 후 적용\"을 누르세요.",
   "rules.unmanage": "관리 중단",
   "rules.unmanageConfirm": "규칙 관리를 중단할까요? 도구 파일은 그대로 남습니다.",
+
+  // import existing agents / skills
+  "import.button": "가져오기",
+  "import.tip": "Claude Code·Codex에 이미 있는 것을 Agent Forge로 가져와 관리합니다",
+  "import.startAgents": "지금 쓰는 에이전트 가져오기",
+  "import.startSkills": "지금 쓰는 스킬 가져오기",
+  "import.result": "{n}개를 가져왔습니다: {names}.",
+  "import.none": "새로 가져올 것이 없습니다.",
+  "import.conflicts": "{names}은(는) Claude Code와 Codex 내용이 달라 Claude Code 쪽을 가져왔습니다. 적용하면 Codex 쪽이 바뀝니다.",
+  "import.skipped": "가져오지 않음: {list}.",
+  "import.reason.invalid-name": "쓸 수 없는 이름",
+  "import.reason.no-description": "설명 없음",
+  "import.reason.codex-ui-file": "Codex 화면 설정 파일(agents/openai.yaml) 포함",
+  "import.reason.too-large": "파일이 너무 많거나 큼",
+  "import.reason.symlink": "링크 파일 포함",
+  "import.reason.legacy-location": "옛 위치 ~/.codex/skills",
+  "import.reason.binary-file": "이미지 등 텍스트가 아닌 파일 포함",
+  "import.extras": "그 밖의 설정 (그대로 유지, 여기서는 수정 불가)",
+  "import.files": "함께 들어 있는 파일 (그대로 유지)",
 
   // gallery
   "gallery.button": "템플릿",

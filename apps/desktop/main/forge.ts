@@ -18,8 +18,10 @@ import {
   deleteSkill,
   displayChangeSet,
   history,
+  importAgents,
   importMcp,
   importRule,
+  importSkills,
   listAgents,
   listSkills,
   preview,
@@ -134,10 +136,12 @@ export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean
   });
 
   handle(IPC.listAgents, () => listAgents(ctx()));
+  handle(IPC.importAgents, () => importAgents(ctx()));
   handle(IPC.saveAgent, (agent: ManagedAgent, previousName?: string) => saveAgent(ctx(), agent, previousName));
   handle(IPC.deleteAgent, (name: string) => deleteAgent(ctx(), name));
 
   handle(IPC.listSkills, () => listSkills(ctx()));
+  handle(IPC.importSkills, () => importSkills(ctx()));
   handle(IPC.saveSkill, (skill: ManagedSkill, previousName?: string) => saveSkill(ctx(), skill, previousName));
   handle(IPC.deleteSkill, (name: string) => deleteSkill(ctx(), name));
 

@@ -1,8 +1,8 @@
 // Types shared by main, preload and renderer. Keep this file free of runtime imports.
-import type { ChangeSet, McpImportResult, RuleImportResult, UndoResult } from "@agent-forge/adapters";
+import type { ChangeSet, ItemImportResult, McpImportResult, RuleImportResult, UndoResult } from "@agent-forge/adapters";
 import type { ManagedAgent, ManagedMcpServer, ManagedRule, ManagedSkill, ToolConfig, ToolId } from "@agent-forge/model";
 
-export type { Change, ChangeSet, CommandChange, ClaudeMcpDef, McpImportResult, RuleImportResult, UndoResult, Warning } from "@agent-forge/adapters";
+export type { Change, ChangeSet, CommandChange, ClaudeMcpDef, ImportSkipReason, ItemImportResult, McpImportResult, RuleImportResult, UndoResult, Warning } from "@agent-forge/adapters";
 
 /** What the renderer sees of an apply (manifests hold secrets and stay in the main process). */
 export interface ApplySummary {
@@ -94,9 +94,12 @@ export interface AgentForgeApi {
 
   // App-managed agents (global scope). Writing goes preview → apply(previewId) → undo.
   listAgents(): Promise<ManagedAgent[]>;
+  /** Starts managing the agents the tools already have (in the current write scope). */
+  importAgents(): Promise<ItemImportResult>;
   saveAgent(agent: ManagedAgent, previousName?: string): Promise<ManagedAgent>;
   deleteAgent(name: string): Promise<void>;
   listSkills(): Promise<ManagedSkill[]>;
+  importSkills(): Promise<ItemImportResult>;
   saveSkill(skill: ManagedSkill, previousName?: string): Promise<ManagedSkill>;
   deleteSkill(name: string): Promise<void>;
   /** Global rule managed by Agent Forge, or null if not managed. */
@@ -152,9 +155,11 @@ export const IPC = {
   overviewChanged: "config:overview-changed",
   rendererReady: "app:renderer-ready",
   listAgents: "forge:list-agents",
+  importAgents: "forge:import-agents",
   saveAgent: "forge:save-agent",
   deleteAgent: "forge:delete-agent",
   listSkills: "forge:list-skills",
+  importSkills: "forge:import-skills",
   saveSkill: "forge:save-skill",
   deleteSkill: "forge:delete-skill",
   getRule: "forge:get-rule",

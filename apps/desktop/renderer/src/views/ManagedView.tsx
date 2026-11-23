@@ -37,12 +37,32 @@ function fromDraft(kind: ManagedKind, d: Draft): Managed {
   };
 }
 
+const show = (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v));
+
+/** Fields and files Agent Forge keeps but does not edit (from imported items). */
+function keptOf(item: Managed | undefined): { extras: string[]; files: string[] } | null {
+  if (!item) return null;
+  const lines = (prefix: string, r?: Record<string, unknown>) => Object.entries(r ?? {}).map(([k, v]) => `${prefix}${k}: ${show(v)}`);
+  if ("claudeExtra" in item || "codexExtra" in item) {
+    const a = item as ManagedAgent;
+    return { extras: [...lines("Claude Code · ", a.claudeExtra), ...lines("Codex · ", a.codexExtra)], files: [] };
+  }
+  const { claudecode, codexcli, ...rest } = (item as ManagedSkill).extra ?? {};
+  const section = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : undefined);
+  return {
+    extras: [...lines("", rest), ...lines("Claude Code · ", section(claudecode)), ...lines("Codex · ", section(codexcli))],
+    files: (item as ManagedSkill).files ?? [],
+  };
+}
+
 /** Per-kind data functions and labels. */
 function kindConfig(kind: ManagedKind) {
   const api = window.agentForge;
   return kind === "agent"
     ? {
         list: () => api.listAgents() as Promise<Managed[]>,
+        importAll: () => api.importAgents(),
+        importStart: "import.startAgents",
         save: (item: Managed, prev?: string) => api.saveAgent(item as ManagedAgent, prev) as Promise<Managed>,
         remove: (name: string) => api.deleteAgent(name),
         label: {
@@ -59,6 +79,8 @@ function kindConfig(kind: ManagedKind) {
       } as const
     : {
         list: () => api.listSkills() as Promise<Managed[]>,
+        importAll: () => api.importSkills(),
+        importStart: "import.startSkills",
         save: (item: Managed, prev?: string) => api.saveSkill(item as ManagedSkill, prev) as Promise<Managed>,
         remove: (name: string) => api.deleteSkill(name),
         label: {
@@ -105,6 +127,27 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
     flow.setError(null);
   }
 
+  async function doImport() {
+    if (dirty && !confirm(t("agents.discard"))) return;
+    flow.setError(null);
+    try {
+      const r = await cfg.importAll();
+      await refresh();
+      const reasons = r.skipped.map((x) => `${x.name} (${t(`import.reason.${x.reason}`)})`).join(", ");
+      flow.setNotice({
+        text: [
+          r.added.length ? t("import.result", { n: r.added.length, names: r.added.join(", ") }) : t("import.none"),
+          r.conflicts.length ? t("import.conflicts", { names: r.conflicts.join(", ") }) : "",
+          r.skipped.length ? t("import.skipped", { list: reasons }) : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
+      });
+    } catch (e) {
+      flow.setError(errorText(e));
+    }
+  }
+
   /** Fills the form with a template as a new, unsaved item. */
   function pickTemplate(tpl: GalleryTemplate) {
     if (tpl.kind !== "agent" && tpl.kind !== "skill") return;
@@ -146,6 +189,7 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
   }
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
+  const kept = keptOf(items.find((i) => i.name === editing));
 
   return (
     <div className="flex min-h-0 flex-1">
@@ -153,6 +197,9 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
         <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
           <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{t(L.title)}</span>
           <div className="flex gap-1">
+            <button className="btn" onClick={doImport} title={t("import.tip")}>
+              {t("import.button")}
+            </button>
             <button className="btn" onClick={() => setPicking(true)}>
               {t("gallery.button")}
             </button>
@@ -165,9 +212,14 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
           {items.length === 0 && (
             <li className="space-y-2 px-3 py-3">
               <p className="text-xs text-neutral-600">{t(L.empty)}</p>
-              <button className="btn" onClick={() => setPicking(true)}>
-                {t("gallery.startFrom")}
-              </button>
+              <div className="flex flex-wrap gap-1.5">
+                <button className="btn" onClick={doImport} title={t("import.tip")}>
+                  {t(cfg.importStart)}
+                </button>
+                <button className="btn" onClick={() => setPicking(true)}>
+                  {t("gallery.startFrom")}
+                </button>
+              </div>
             </li>
           )}
           {items.map((a) => (
@@ -223,6 +275,24 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
               <Field label={t("agents.tools")} hint={t("agents.toolsHint")}>
                 <input className="input font-mono" value={draft.tools} onChange={(e) => set("tools", e.target.value)} placeholder="Read, Grep, Glob" />
               </Field>
+            </div>
+          )}
+          {kept && (kept.extras.length > 0 || kept.files.length > 0) && (
+            <div className="space-y-3">
+              {kept.extras.length > 0 && (
+                <Field label={t("import.extras")}>
+                  <pre className="rounded border border-neutral-800 bg-neutral-950 px-3 py-2 font-mono text-xs text-neutral-400">
+                    {kept.extras.join("\n")}
+                  </pre>
+                </Field>
+              )}
+              {kept.files.length > 0 && (
+                <Field label={t("import.files")}>
+                  <pre className="rounded border border-neutral-800 bg-neutral-950 px-3 py-2 font-mono text-xs text-neutral-400">
+                    {kept.files.join("\n")}
+                  </pre>
+                </Field>
+              )}
             </div>
           )}
           <Field label={t(L.body)}>
