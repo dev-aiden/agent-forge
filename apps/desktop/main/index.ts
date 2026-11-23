@@ -211,7 +211,13 @@ app.whenReady().then(async () => {
   applyTheme(await readSettings(settingsCtx()));
   setMenu();
   // Packaged apps get the icon from electron-builder; in dev, show it in the Dock too.
-  if (!app.isPackaged && process.platform === "darwin") app.dock?.setIcon(join(app.getAppPath(), "build", "icon.png"));
+  if (!app.isPackaged && process.platform === "darwin") {
+    try {
+      app.dock?.setIcon(join(app.getAppPath(), "build", "icon.png"));
+    } catch {
+      // Cosmetic only; never block startup.
+    }
+  }
   if (SMOKE) setTimeout(() => smokeFail(`timeout after ${SMOKE_TIMEOUT_MS}ms`), SMOKE_TIMEOUT_MS);
   mainWindow = createWindow();
   app.on("activate", () => {

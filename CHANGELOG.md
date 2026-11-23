@@ -4,6 +4,7 @@
 
 ### Changed
 - Renamed from **Agent Forge** to **Kitroom**; the repository moved to `github.com/dev-aiden/kitroom`.
+- New app icon: a kit case holding agents, skills, rules and MCP servers.
 - On first launch, the app folder `~/.agent-forge` is moved to `~/.kitroom`, so agents, skills, settings and undo history carry over.
 
 If you installed Agent Forge 0.1.0, it will not tell you about this release: download Kitroom from the release page and delete the old "Agent Forge" app.

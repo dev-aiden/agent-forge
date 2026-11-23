@@ -1,23 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- Kitroom app icon: an anvil with connected agent nodes rising like sparks. -->
+  <!-- Kitroom app icon: a kit case holding four items (agents, skills, rules, MCP servers). -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#1e293b"/>
       <stop offset="1" stop-color="#0b1120"/>
     </linearGradient>
-    <radialGradient id="glow" cx="512" cy="760" r="420" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#f97316" stop-opacity="0.55"/>
-      <stop offset="0.55" stop-color="#ea580c" stop-opacity="0.16"/>
+    <radialGradient id="glow" cx="512" cy="600" r="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f97316" stop-opacity="0.32"/>
+      <stop offset="0.6" stop-color="#ea580c" stop-opacity="0.08"/>
       <stop offset="1" stop-color="#ea580c" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="anvil" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="case" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#f8fafc"/>
       <stop offset="1" stop-color="#cbd5e1"/>
     </linearGradient>
-    <linearGradient id="spark" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#fb923c"/>
-      <stop offset="1" stop-color="#fde047"/>
+    <linearGradient id="inner" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e293b"/>
     </linearGradient>
+    <linearGradient id="o" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#f97316"/><stop offset="1" stop-color="#fdba74"/></linearGradient>
+    <linearGradient id="t" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#14b8a6"/><stop offset="1" stop-color="#5eead4"/></linearGradient>
+    <linearGradient id="v" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#c4b5fd"/></linearGradient>
+    <linearGradient id="y" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#eab308"/><stop offset="1" stop-color="#fde047"/></linearGradient>
     <clipPath id="tile"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
   </defs>
   <g clip-path="url(#tile)">
@@ -26,37 +30,14 @@
   </g>
   <rect x="100.5" y="100.5" width="823" height="823" rx="184.5" fill="none" stroke="#ffffff" stroke-opacity="0.08"/>
 
-  <!-- agent nodes -->
-  <g stroke="url(#spark)" stroke-width="22" stroke-linecap="round" fill="none">
-    <path d="M392 392 L512 292 L632 392"/>
-  </g>
-  <g fill="url(#spark)">
-    <circle cx="392" cy="392" r="42"/>
-    <circle cx="512" cy="292" r="50"/>
-    <circle cx="632" cy="392" r="42"/>
-  </g>
-
-  <!-- anvil -->
-  <path fill="url(#anvil)" d="
-    M 236 478
-    C 288 470 330 466 348 466
-    L 790 466
-    Q 800 466 800 476
-    L 800 532
-    Q 800 544 788 546
-    C 730 556 686 572 664 600
-    L 664 650
-    C 686 662 716 676 744 690
-    Q 756 696 756 710
-    L 756 744
-    Q 756 756 744 756
-    L 280 756
-    Q 268 756 268 744
-    L 268 710
-    Q 268 696 280 690
-    C 308 676 338 662 360 650
-    L 360 600
-    C 340 574 300 558 262 548
-    C 236 540 222 520 214 500
-    Q 210 482 236 478 Z"/>
+  <!-- handle -->
+  <path d="M418 330 L418 288 Q418 252 454 252 L570 252 Q606 252 606 288 L606 330" fill="none" stroke="url(#case)" stroke-width="40" stroke-linecap="round"/>
+  <!-- case -->
+  <rect x="236" y="320" width="552" height="456" rx="64" fill="url(#case)"/>
+  <rect x="280" y="364" width="464" height="368" rx="32" fill="url(#inner)"/>
+  <!-- four kit items -->
+  <rect x="314" y="398" width="182" height="134" rx="26" fill="url(#o)"/>
+  <rect x="528" y="398" width="182" height="134" rx="26" fill="url(#t)"/>
+  <rect x="314" y="564" width="182" height="134" rx="26" fill="url(#v)"/>
+  <rect x="528" y="564" width="182" height="134" rx="26" fill="url(#y)"/>
 </svg>
