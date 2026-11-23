@@ -41,10 +41,13 @@ jobs:
         if: runner.os != 'Linux'
         run: node apps/desktop/scripts/smoke.mjs --packaged
 
-      # The runner is Apple Silicon; the Intel build runs under Rosetta.
+      # The runner is Apple Silicon; the Intel build runs under Rosetta, which
+      # the runner image does not always include.
       - name: Smoke test packaged app (macOS Intel)
         if: runner.os == 'macOS'
-        run: node apps/desktop/scripts/smoke.mjs --packaged --arch x64
+        run: |
+          /usr/bin/pgrep -q oahd || softwareupdate --install-rosetta --agree-to-license
+          node apps/desktop/scripts/smoke.mjs --packaged --arch x64
 
       # Ubuntu 24.04 restricts unprivileged user namespaces, which Chromium's
       # sandbox needs; CI-only workaround. Xvfb provides a display.

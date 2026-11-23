@@ -124,7 +124,7 @@ test("renaming an imported skill keeps its files and extras", async () => {
   assert.equal(t!.name, "ship");
   assert.deepEqual(t!.extra, { claudecode: { "allowed-tools": "Bash" } });
   const out = await changed();
-  const shipped = out.find((c) => c.path.endsWith("ship/scripts/deploy.sh"));
+  const shipped = out.find((c) => c.path.replaceAll("\\", "/").endsWith("ship/scripts/deploy.sh"));
   assert.equal(shipped?.after, "echo\n");
   assert.match(await readFile(join(home, ".claude/skills/deploy/SKILL.md"), "utf8"), /deploy/);
 });
