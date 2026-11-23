@@ -1,0 +1,13 @@
+{
+  "title": { "en": "Memory", "ko": "Memory (기억 저장)" },
+  "summary": {
+    "en": "Gives the AI a small local knowledge graph to remember facts across sessions. Stored on this computer. Needs Node.js.",
+    "ko": "AI가 세션이 바뀌어도 기억할 내용을 이 컴퓨터 안의 작은 저장소에 남길 수 있게 합니다. Node.js가 필요합니다."
+  },
+  "server": {
+    "name": "memory",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-memory"]
+  }
+}

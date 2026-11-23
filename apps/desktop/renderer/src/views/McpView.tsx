@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { WRITABLE_AGENT_TOOLS, type ManagedMcpServer, type McpTransport, type ToolId } from "@agent-forge/model";
+import { uniqueName, type GalleryTemplate } from "@agent-forge/model/gallery";
 import { useApplyFlow } from "../apply-flow";
 import { Badge } from "../components/Badges";
 import { Field, TargetPicker, TOOL_LABEL } from "../components/Form";
+import { TemplatePicker } from "../components/TemplatePicker";
 import { errorText } from "../format";
-import { useT } from "../i18n";
+import { useLang, useT } from "../i18n";
 
 interface Draft {
   name: string;
@@ -67,6 +69,8 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [saved, setSaved] = useState<Draft>(EMPTY);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const [picking, setPicking] = useState(false);
+  const lang = useLang();
 
   const load = useCallback(async () => setServers(await window.agentForge.listMcp()), []);
   useEffect(() => {
@@ -94,6 +98,20 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
     } catch (e) {
       flow.setError(errorText(e));
     }
+  }
+
+  /** Fills the form with a template as a new, unsaved server. */
+  function pickTemplate(tpl: GalleryTemplate) {
+    if (tpl.kind !== "mcp") return;
+    if (dirty && !confirm(t("agents.discard"))) return;
+    const name = uniqueName(tpl.server.name, (servers ?? []).map((s) => s.name));
+    setPicking(false);
+    setEditing(null);
+    setSaved(EMPTY);
+    setDraft(toDraft({ ...tpl.server, name, targets: EMPTY.targets }));
+    flow.setError(null);
+    const title = tpl.title[lang];
+    flow.setNotice({ text: [t("gallery.loaded", { title }), name !== tpl.server.name ? t("gallery.renamed", { name }) : ""].filter(Boolean).join(" ") });
   }
 
   async function save() {
@@ -144,6 +162,9 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
               <button className="btn" onClick={doImport} title={t("mcp.reimport")}>
                 {t("mcp.reimport")}
               </button>
+              <button className="btn" onClick={() => setPicking(true)}>
+                {t("gallery.button")}
+              </button>
               <button className="btn" onClick={() => select(null)}>
                 {t("agents.new")}
               </button>
@@ -152,7 +173,14 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
         </div>
         <ul className="min-h-0 flex-1 overflow-y-auto">
           {servers === null && <li className="px-4 py-4 text-xs leading-relaxed text-neutral-400">{t("mcp.intro")}</li>}
-          {servers?.length === 0 && <li className="px-3 py-3 text-xs text-neutral-600">{t("mcp.empty")}</li>}
+          {servers?.length === 0 && (
+            <li className="space-y-2 px-3 py-3">
+              <p className="text-xs text-neutral-600">{t("mcp.empty")}</p>
+              <button className="btn" onClick={() => setPicking(true)}>
+                {t("gallery.startFrom")}
+              </button>
+            </li>
+          )}
           {servers?.map((s) => (
             <li key={s.name}>
               <button
@@ -267,6 +295,7 @@ export function McpView({ shortPath }: { shortPath(path: string): string }) {
       </section>
 
       {flow.dialog}
+      {picking && <TemplatePicker kind="mcp" onPick={pickTemplate} onClose={() => setPicking(false)} />}
     </div>
   );
 }

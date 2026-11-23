@@ -1,0 +1,13 @@
+{
+  "title": { "en": "Playwright (browser)", "ko": "Playwright (브라우저)" },
+  "summary": {
+    "en": "Lets the AI open web pages, click and fill forms in a real browser. Needs Node.js; npx downloads the package on first run.",
+    "ko": "AI가 실제 브라우저로 웹 페이지를 열고 클릭·입력할 수 있게 합니다. Node.js가 필요하며, 처음 실행할 때 npx가 패키지를 내려받습니다."
+  },
+  "server": {
+    "name": "playwright",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@playwright/mcp@latest"]
+  }
+}

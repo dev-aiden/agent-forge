@@ -1,0 +1,13 @@
+{
+  "title": { "en": "Context7 (library docs)", "ko": "Context7 (라이브러리 문서)" },
+  "summary": {
+    "en": "Gives the AI up-to-date documentation for popular libraries, so it uses current APIs. Works without an API key. Needs Node.js.",
+    "ko": "자주 쓰는 라이브러리의 최신 문서를 AI에게 제공해, 옛날 API를 쓰는 실수를 줄입니다. API 키 없이 쓸 수 있습니다. Node.js가 필요합니다."
+  },
+  "server": {
+    "name": "context7",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@upstash/context7-mcp@latest"]
+  }
+}

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { WRITABLE_AGENT_TOOLS, type ManagedAgent, type ManagedKind, type ManagedSkill, type ToolId } from "@agent-forge/model";
+import { uniqueName, type GalleryTemplate } from "@agent-forge/model/gallery";
 import { useApplyFlow } from "../apply-flow";
 import { Badge } from "../components/Badges";
 import { Field, TargetPicker, TOOL_LABEL } from "../components/Form";
+import { TemplatePicker } from "../components/TemplatePicker";
 import { errorText } from "../format";
-import { useT } from "../i18n";
+import { useLang, useT } from "../i18n";
 
 interface Draft {
   name: string;
@@ -83,6 +85,8 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [saved, setSaved] = useState<Draft>(EMPTY);
+  const [picking, setPicking] = useState(false);
+  const lang = useLang();
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
 
@@ -99,6 +103,21 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
     setDraft(d);
     setSaved(d);
     flow.setError(null);
+  }
+
+  /** Fills the form with a template as a new, unsaved item. */
+  function pickTemplate(tpl: GalleryTemplate) {
+    if (tpl.kind !== "agent" && tpl.kind !== "skill") return;
+    if (dirty && !confirm(t("agents.discard"))) return;
+    const item: Managed = tpl.kind === "agent" ? { ...tpl.agent, targets: EMPTY.targets } : { ...tpl.skill, targets: EMPTY.targets };
+    const name = uniqueName(item.name, items.map((i) => i.name));
+    setPicking(false);
+    setEditing(null);
+    setSaved(EMPTY);
+    setDraft(toDraft({ ...item, name }));
+    flow.setError(null);
+    const title = tpl.title[lang];
+    flow.setNotice({ text: [t("gallery.loaded", { title }), name !== item.name ? t("gallery.renamed", { name }) : ""].filter(Boolean).join(" ") });
   }
 
   async function save() {
@@ -133,12 +152,24 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
       <aside className="flex w-[300px] shrink-0 flex-col border-r border-neutral-800">
         <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
           <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{t(L.title)}</span>
-          <button className="btn" onClick={() => select(null)}>
-            {t("agents.new")}
-          </button>
+          <div className="flex gap-1">
+            <button className="btn" onClick={() => setPicking(true)}>
+              {t("gallery.button")}
+            </button>
+            <button className="btn" onClick={() => select(null)}>
+              {t("agents.new")}
+            </button>
+          </div>
         </div>
         <ul className="min-h-0 flex-1 overflow-y-auto">
-          {items.length === 0 && <li className="px-3 py-3 text-xs text-neutral-600">{t(L.empty)}</li>}
+          {items.length === 0 && (
+            <li className="space-y-2 px-3 py-3">
+              <p className="text-xs text-neutral-600">{t(L.empty)}</p>
+              <button className="btn" onClick={() => setPicking(true)}>
+                {t("gallery.startFrom")}
+              </button>
+            </li>
+          )}
           {items.map((a) => (
             <li key={a.name}>
               <button
@@ -217,6 +248,7 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
       </section>
 
       {flow.dialog}
+      {picking && <TemplatePicker kind={kind} onPick={pickTemplate} onClose={() => setPicking(false)} />}
     </div>
   );
 }

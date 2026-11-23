@@ -145,6 +145,23 @@ const en = {
   "rules.unmanage": "Stop managing",
   "rules.unmanageConfirm": "Stop managing these rules? Your tool files stay as they are.",
 
+  // gallery
+  "gallery.button": "Templates",
+  "gallery.startFrom": "Start from a template",
+  "gallery.title.agent": "Agent templates",
+  "gallery.title.skill": "Skill templates",
+  "gallery.title.rule": "Rule sections",
+  "gallery.title.mcp": "MCP server templates",
+  "gallery.intro": "Pick a template to fill in the form. Nothing is saved or applied until you do it yourself.",
+  "gallery.introRule": "The section is added to the end of your rules. Nothing is saved or applied until you do it yourself.",
+  "gallery.use": "Use this template",
+  "gallery.append": "Add to my rules",
+  "gallery.addSection": "Add section",
+  "gallery.loaded": "Loaded the \"{title}\" template. Edit it if you like, then save.",
+  "gallery.renamed": "Named \"{name}\" because that name was already taken.",
+  "gallery.appended": "Added \"{title}\" to the end. Edit it if you like, then save.",
+  "gallery.already": "\"{title}\" is already in your rules.",
+
   // mcp
   "nav.mcp": "MCP",
   "mcp.title": "MCP servers",
@@ -367,6 +384,23 @@ const ko: Messages = {
   "rules.unmanage": "관리 중단",
   "rules.unmanageConfirm": "규칙 관리를 중단할까요? 도구 파일은 그대로 남습니다.",
 
+  // gallery
+  "gallery.button": "템플릿",
+  "gallery.startFrom": "템플릿에서 시작하기",
+  "gallery.title.agent": "에이전트 템플릿",
+  "gallery.title.skill": "스킬 템플릿",
+  "gallery.title.rule": "규칙 문단",
+  "gallery.title.mcp": "MCP 서버 템플릿",
+  "gallery.intro": "템플릿을 고르면 입력란이 채워집니다. 직접 저장하고 적용하기 전에는 아무것도 바뀌지 않습니다.",
+  "gallery.introRule": "고른 문단이 규칙 끝에 덧붙습니다. 직접 저장하고 적용하기 전에는 아무것도 바뀌지 않습니다.",
+  "gallery.use": "이 템플릿 사용",
+  "gallery.append": "내 규칙에 추가",
+  "gallery.addSection": "문단 추가",
+  "gallery.loaded": "\"{title}\" 템플릿을 불러왔습니다. 필요하면 고친 뒤 저장하세요.",
+  "gallery.renamed": "같은 이름이 있어서 \"{name}\"(으)로 정했습니다.",
+  "gallery.appended": "\"{title}\" 문단을 끝에 추가했습니다. 필요하면 고친 뒤 저장하세요.",
+  "gallery.already": "\"{title}\" 문단은 이미 규칙에 들어 있습니다.",
+
   "nav.mcp": "MCP",
   "mcp.title": "MCP 서버",
   "mcp.intro": "Agent Forge는 목록 하나를 관리하고 선택한 도구에 적용합니다. 전역에서는 Claude Code를 공식 CLI로 바꾸고, 프로젝트에서는 .mcp.json에 씁니다. Codex의 config.toml은 다른 설정을 그대로 둡니다.",
@@ -465,9 +499,19 @@ export function makeT(lang: "en" | "ko"): T {
 }
 
 const I18nContext = createContext<T>(makeT("en"));
+const LangContext = createContext<"en" | "ko">("en");
 
 export function I18nProvider({ lang, children }: { lang: "en" | "ko"; children: ReactNode }) {
-  return <I18nContext.Provider value={makeT(lang)}>{children}</I18nContext.Provider>;
+  return (
+    <LangContext.Provider value={lang}>
+      <I18nContext.Provider value={makeT(lang)}>{children}</I18nContext.Provider>
+    </LangContext.Provider>
+  );
+}
+
+/** The resolved UI language, for content that carries its own translations (gallery templates). */
+export function useLang(): "en" | "ko" {
+  return useContext(LangContext);
 }
 
 export function useT(): T {

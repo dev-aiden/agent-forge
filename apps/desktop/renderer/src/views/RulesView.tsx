@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ManagedRule } from "@agent-forge/model";
 import { useApplyFlow } from "../apply-flow";
+import type { GalleryTemplate } from "@agent-forge/model/gallery";
 import { Field, TargetPicker, TOOL_LABEL } from "../components/Form";
+import { TemplatePicker } from "../components/TemplatePicker";
 import { errorText } from "../format";
-import { useT } from "../i18n";
+import { useLang, useT } from "../i18n";
 
 /** The global top-level instructions (CLAUDE.md / AGENTS.md). */
 export function RulesView({ shortPath }: { shortPath(path: string): string }) {
@@ -11,6 +13,8 @@ export function RulesView({ shortPath }: { shortPath(path: string): string }) {
   const flow = useApplyFlow(shortPath);
   const [rule, setRule] = useState<ManagedRule | null | undefined>(undefined);
   const [draft, setDraft] = useState<ManagedRule | null>(null);
+  const [picking, setPicking] = useState(false);
+  const lang = useLang();
 
   const load = useCallback(async () => {
     const r = await window.agentForge.getRule();
@@ -36,6 +40,21 @@ export function RulesView({ shortPath }: { shortPath(path: string): string }) {
     } catch (e) {
       flow.setError(errorText(e));
     }
+  }
+
+  /** Appends a template section to the end of the (unsaved) rules. Never replaces text. */
+  function appendSection(tpl: GalleryTemplate) {
+    if (tpl.kind !== "rule" || !draft) return;
+    setPicking(false);
+    const title = tpl.title[lang];
+    const section = tpl.body.trim();
+    if (draft.body.includes(section)) {
+      flow.setNotice({ text: t("gallery.already", { title }) });
+      return;
+    }
+    const base = draft.body.trimEnd();
+    setDraft({ ...draft, body: `${base}${base ? "\n\n" : ""}${section}\n` });
+    flow.setNotice({ text: t("gallery.appended", { title }) });
   }
 
   async function save() {
@@ -93,6 +112,9 @@ export function RulesView({ shortPath }: { shortPath(path: string): string }) {
               <button className="btn-primary" onClick={save} disabled={!dirty}>
                 {t("agents.save")}
               </button>
+              <button className="btn" onClick={() => setPicking(true)}>
+                {t("gallery.addSection")}
+              </button>
               <button className="btn" onClick={stop}>
                 {t("rules.unmanage")}
               </button>
@@ -103,6 +125,7 @@ export function RulesView({ shortPath }: { shortPath(path: string): string }) {
       </section>
 
       {flow.dialog}
+      {picking && <TemplatePicker kind="rule" onPick={appendSection} onClose={() => setPicking(false)} />}
     </div>
   );
 }
