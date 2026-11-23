@@ -1,0 +1,57 @@
+name: Bug report / 버그 신고
+description: Something went wrong / 문제가 생겼어요
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before posting, remove tokens, API keys, passwords and personal paths.**
+        Agent Forge masks secrets on screen, but copied files or logs may still contain them.
+        **올리기 전에 토큰·API 키·비밀번호·개인 경로를 지워 주세요.**
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / 무슨 일이 있었나요?
+      description: What you did, what you expected, what happened instead. / 무엇을 했고, 무엇을 기대했고, 실제로 어떻게 됐는지
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 다시 해 보는 방법
+      placeholder: |
+        1. Open "Agents" / "에이전트" 화면을 연다
+        2. ...
+  - type: input
+    id: version
+    attributes:
+      label: Agent Forge version / 버전
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options: [macOS (Apple Silicon), macOS (Intel), Windows, Linux]
+    validations:
+      required: true
+  - type: checkboxes
+    id: tools
+    attributes:
+      label: Tools involved / 관련된 도구
+      options:
+        - label: Claude Code
+        - label: Codex CLI
+        - label: Copilot CLI
+        - label: Antigravity CLI
+  - type: textarea
+    id: preview
+    attributes:
+      label: Preview / diff / error text (optional) / 미리보기·오류 내용 (선택)
+      description: Screenshots welcome. Check for secrets first. / 캡처 환영. 비밀값이 없는지 먼저 확인해 주세요.
+  - type: markdown
+    attributes:
+      value: |
+        If a file was changed unexpectedly: use **Apply history → Undo** in the app, or restore from `~/.agent-forge/backups/` (see the user guide).
+        파일이 예상과 다르게 바뀌었다면 앱의 **적용 기록 → 되돌리기**나 `~/.agent-forge/backups/`로 복원할 수 있습니다 (사용법 참고).
