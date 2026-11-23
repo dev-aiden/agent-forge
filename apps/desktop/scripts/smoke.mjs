@@ -13,7 +13,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const appDir = join(dirname(fileURLToPath(import.meta.url)), "..");
-const TIMEOUT_MS = 120_000;
+const TIMEOUT_MS = Number(process.env.SMOKE_TIMEOUT_MS) || 120_000;
 
 const args = process.argv.slice(2);
 const packaged = args.includes("--packaged");
@@ -47,6 +47,7 @@ child.stderr.on("data", (d) => (output += d));
 
 const timer = setTimeout(() => {
   console.error(`smoke: timed out after ${TIMEOUT_MS}ms`);
+  process.stdout.write(output);
   child.kill();
   process.exit(1);
 }, TIMEOUT_MS);
