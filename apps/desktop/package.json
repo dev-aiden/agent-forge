@@ -1,7 +1,7 @@
 {
   "name": "@agent-forge/desktop",
   "productName": "Agent Forge",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "description": "Configure and run your AI coding CLIs from one window.",

@@ -3,6 +3,9 @@ name: desktop
 on:
   push:
     branches: [main]
+    # A version tag (v1.2.3) also creates a *draft* GitHub release with the
+    # installers. Nothing is public until the draft is published by hand.
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -68,3 +71,37 @@ jobs:
             apps/desktop/release/*.AppImage
           if-no-files-found: error
           retention-days: 7
+
+  release:
+    name: draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Tag must match the app version
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME does not match version $version"; exit 1; }
+
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          awk -v v="${GITHUB_REF_NAME#v}" '$0 ~ "^## \\[?"v"\\]?" {on=1; next} /^## / && on {exit} on' CHANGELOG.md > notes.md
+          test -s notes.md || { echo "No CHANGELOG.md section for ${GITHUB_REF_NAME}"; exit 1; }
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --draft --title "Agent Forge ${GITHUB_REF_NAME#v}" --notes-file notes.md
+
