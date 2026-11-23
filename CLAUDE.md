@@ -32,6 +32,11 @@
 - 렌더러는 Node 접근 없이(contextIsolation) preload로 노출한 API만 쓴다.
 
 ## 현재 단계와 다음 작업
+- 7주차: 기존 에이전트·스킬 가져오기, Intel Mac 빌드
+  - 가져오기: `importAgents`/`importSkills` (`packages/adapters/write/import.ts`). 화면에 없는 필드는 `claudeExtra`·`codexExtra`(에이전트), `extra`(스킬, rulesync 형식: 최상위 키 + `claudecode` 섹션)로 보존. 앱에서 저장해도 유지(렌더러는 보내지 않음)
+  - 스킬 묶음 파일은 소스 폴더로 복사, 이름 바꾸면 폴더째 이동. 가져오지 않는 경우: 바이너리 파일(파이프라인이 텍스트만 다룸), 링크, 200개/20MB 초과, Codex `agents/openai.yaml`, 옛 위치 `~/.codex/skills`, claude.ai 동기화 스킬
+  - 미리보기: frontmatter 값과 본문이 같고 형식만 다르면(키 순서·따옴표) `unchanged`로 보고 원래 파일 유지 (`sameMarkdown`). 가져온 직후 적용은 "이미 최신"이어야 함 — 테스트로 확인
+  - Intel Mac: `mac-x64.dmg` 추가(node-pty x64 prebuild 사용), CI가 Rosetta로 x64 스모크 테스트
 - 6주차: 기본 템플릿(`gallery/`)과 지인 테스트 배포 준비
   - 형식: `gallery/{agents,skills,rules,mcp}/` 마크다운(평평한 `key: value` frontmatter)·JSON, 파서는 `packages/model/gallery.ts`, 렌더러가 빌드 때 `import.meta.glob`으로 포함 (IPC·파일 읽기 없음)
   - 템플릿은 입력란만 채움(저장·적용은 사용자가). 규칙은 끝에 덧붙이기만, 같은 이름은 `-2` 붙임
