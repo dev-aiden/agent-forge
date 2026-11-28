@@ -73,6 +73,18 @@ export interface Skill extends ItemBase {
   extra: Record<string, unknown>;
 }
 
+/**
+ * A custom slash command / prompt file (Claude Code `commands/*.md`, Codex
+ * `prompts/*.md`). Both tools now recommend skills instead; Kitroom shows these
+ * read-only and can move them into skills.
+ */
+export interface Command extends ItemBase {
+  kind: "command";
+  /** Prompt text (without frontmatter). */
+  body: string;
+  extra: Record<string, unknown>;
+}
+
 export type McpTransport = "stdio" | "http" | "sse";
 
 export interface McpServer extends ItemBase {
@@ -89,7 +101,7 @@ export interface McpServer extends ItemBase {
   extra: Record<string, unknown>;
 }
 
-export type Item = Rule | Agent | Skill | McpServer;
+export type Item = Rule | Agent | Skill | Command | McpServer;
 
 /** A problem found while reading (unparseable file, unexpected shape...). */
 export interface ReadIssue {
@@ -103,6 +115,7 @@ export interface ToolConfig {
   rules: Rule[];
   agents: Agent[];
   skills: Skill[];
+  commands: Command[];
   mcpServers: McpServer[];
   issues: ReadIssue[];
 }
@@ -206,6 +219,10 @@ export interface ManagedSkill {
   /** SKILL.md body. */
   body: string;
   targets: ToolId[];
+  /** Only when called by name (`/name`); the tool does not pick it on its own (`disable-model-invocation`). */
+  userOnly?: boolean;
+  /** Claude Code autocomplete hint for arguments, e.g. `[issue-number]` (`argument-hint`). */
+  argumentHint?: string;
   /**
    * Other frontmatter kept from an imported skill, in rulesync form (top-level
    * keys like `license`, and a `claudecode` section). Not editable; kept on save.

@@ -165,11 +165,11 @@ The **Apply to** bar above Agents, Skills, Rules and MCP chooses the target.
 
 ### 6-1. Overview
 
-- Pick a tool tab (Claude Code, Codex CLI, …) to see its **rules / agents / skills / MCP servers**.
+- Pick a tool tab (Claude Code, Codex CLI, …) to see its **rules / agents / skills / commands / MCP servers**. Commands are Claude Code custom commands (`commands/*.md`) and Codex custom prompts (`~/.codex/prompts/*.md`); see [Move old commands into skills](#move-old-commands-into-skills).
 - Click an item to see its content and file location.
 - Badges:
   - `global` / `project` / `local` — the scope of the setting;
-  - `unverified path` — a location not confirmed by the tool's official documentation (none at the moment);
+  - `unverified path` — a location not confirmed by the tool's official documentation (at the moment only `~/.claude/commands`: the docs name only the project folder `.claude/commands`);
   - `claude.ai` — skills synced from claude.ai (never touched by the app).
 - Type in the filter box to search by name or description.
 
@@ -219,7 +219,10 @@ To change one, select it, edit, `Save changes`, apply again. `Delete` and then a
 
 ### 6-4. Skills
 
-Same as agents; the body goes into the `SKILL.md` field.
+Same as agents; the body goes into the `SKILL.md` field. Two more fields:
+
+- **Only when called by name** — the tool does not pick the skill on its own; it runs only when you type `/name` (Claude Code) or call it by name (Codex). Written as `disable-model-invocation: true` for Claude Code and as `policy.allow_implicit_invocation: false` in the skill's `agents/openai.yaml` for Codex.
+- **Argument hint** — Claude Code only. Shown when typing `/name`, e.g. `[issue-number]` (`argument-hint`).
 
 | | Global | Project |
 |---|---|---|
@@ -236,6 +239,21 @@ Same as agents; the body goes into the `SKILL.md` field.
 - Codex skills with UI settings (`agents/openai.yaml`);
 - skills in the old location `~/.codex/skills`;
 - skills synced from claude.ai (`~/.claude/skills/synced`).
+
+#### Move old commands into skills
+
+Claude Code has merged custom commands into skills, and Codex has deprecated custom prompts in favor of skills. The **Old commands** list under My skills shows the commands of the current scope:
+
+| | Global | Project |
+|---|---|---|
+| Claude Code | `~/.claude/commands/*.md` | `<project>/.claude/commands/*.md` |
+| Codex CLI | `~/.codex/prompts/*.md` | — |
+
+`Move to skill` creates a Kitroom skill with the same name, settings and content, for the same tool. A Codex prompt becomes a skill that runs only when called by name, as before. Nothing in the tools changes until you preview and apply.
+
+- **Delete the original file on the next apply** (off by default): the next preview lists the command file as deleted; it is backed up and `Undo` restores it. The file is kept if you edited it after moving, or if the skill was deleted or no longer targets that tool. A skill takes priority over a command with the same name, so keeping the file is harmless in Claude Code.
+- Prompts that use argument placeholders (`$1`, `$ARGUMENTS`, `$NAME`) get a warning: Codex skills do not fill them in, so check the content after moving.
+- These are not moved, with the reason shown: commands in sub-folders (`git/commit.md`) or with names not allowed for a skill, commands with a skill of the same name, and commands with frontmatter a skill cannot keep.
 
 ### 6-5. Rules (top-level instructions)
 

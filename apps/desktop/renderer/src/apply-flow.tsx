@@ -1,6 +1,6 @@
 // Preview → apply → undo flow shared by every editing screen (agents, skills,
 // rules, MCP). One "Preview & apply" applies everything Kitroom manages.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ApplySummary, ChangeSet } from "../../shared/api";
 import { PreviewDialog } from "./components/PreviewDialog";
 import { errorText } from "./format";
@@ -11,8 +11,11 @@ export interface Notice {
   undoId?: string;
 }
 
-export function useApplyFlow(shortPath: (path: string) => string) {
+/** `onChanged` runs after an apply or undo changed tool files (e.g. to reload lists that depend on them). */
+export function useApplyFlow(shortPath: (path: string) => string, onChanged?: () => void) {
   const t = useT();
+  const changed = useRef(onChanged);
+  changed.current = onChanged;
   const lang = useLang();
   const [history, setHistory] = useState<ApplySummary[]>([]);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -58,6 +61,7 @@ export function useApplyFlow(shortPath: (path: string) => string) {
       }
       setPreview(null);
       await refreshHistory();
+      changed.current?.();
       const n = result.manifest.fileCount + result.manifest.commandCount;
       setNotice({ text: t("agents.applied", { n }), undoId: result.manifest.id });
     } catch (e) {
@@ -71,6 +75,7 @@ export function useApplyFlow(shortPath: (path: string) => string) {
     try {
       const r = await window.kitroom.undo(id);
       await refreshHistory();
+      changed.current?.();
       setNotice({
         text:
           t("agents.restored", { n: r.restored.length }) +

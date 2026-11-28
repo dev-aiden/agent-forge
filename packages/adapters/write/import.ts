@@ -190,12 +190,12 @@ export async function importAgents(ctx: PathContext): Promise<ItemImportResult> 
 }
 
 /** rulesync keys that live at the top level of a skill's frontmatter. Others are Claude-only. */
-const SKILL_TOP_LEVEL = new Set(["disable-model-invocation", "user-invocable", "license", "compatibility", "metadata"]);
+export const SKILL_TOP_LEVEL = new Set(["disable-model-invocation", "user-invocable", "license", "compatibility", "metadata"]);
 /**
  * Frontmatter keys rulesync writes back for each tool. A skill using any other key
  * would lose it on apply, so it is not imported.
  */
-const SKILL_KEYS: Record<"claude" | "codex", Set<string>> = {
+export const SKILL_KEYS: Record<"claude" | "codex", Set<string>> = {
   claude: new Set([
     "when_to_use", "allowed-tools", "disallowed-tools", "model", "effort", "argument-hint", "context", "agent", "shell",
     "background", "arguments", "hooks", "disable-model-invocation", "user-invocable", "paths", "license", "compatibility", "metadata",

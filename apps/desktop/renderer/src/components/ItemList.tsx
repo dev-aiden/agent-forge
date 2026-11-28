@@ -7,6 +7,7 @@ const SECTIONS = [
   { key: "rules", title: "section.rules" },
   { key: "agents", title: "section.agents" },
   { key: "skills", title: "section.skills" },
+  { key: "commands", title: "section.commands" },
   { key: "mcpServers", title: "section.mcp" },
 ] as const;
 

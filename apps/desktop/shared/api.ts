@@ -1,8 +1,8 @@
 // Types shared by main, preload and renderer. Keep this file free of runtime imports.
-import type { ChangeSet, ItemImportResult, McpImportResult, RuleImportResult, UndoResult } from "@kitroom/adapters";
+import type { ChangeSet, CommandTool, ItemImportResult, LegacyCommand, McpImportResult, MoveCommandResult, RuleImportResult, UndoResult } from "@kitroom/adapters";
 import type { ManagedAgent, ManagedMcpServer, ManagedRule, ManagedSkill, ToolConfig, ToolId } from "@kitroom/model";
 
-export type { Change, ChangeSet, CommandChange, ClaudeMcpDef, ImportSkipReason, ItemImportResult, McpImportResult, RuleImportResult, UndoResult, Warning } from "@kitroom/adapters";
+export type { Change, ChangeSet, CommandBlockReason, CommandChange, CommandTool, ClaudeMcpDef, ImportSkipReason, LegacyCommand, MoveCommandResult, ItemImportResult, McpImportResult, RuleImportResult, UndoResult, Warning } from "@kitroom/adapters";
 
 /** What the renderer sees of an apply (manifests hold secrets and stay in the main process). */
 export interface ApplySummary {
@@ -113,6 +113,10 @@ export interface KitroomApi {
   importSkills(): Promise<ItemImportResult>;
   saveSkill(skill: ManagedSkill, previousName?: string): Promise<ManagedSkill>;
   deleteSkill(name: string): Promise<void>;
+  /** Custom commands (Claude Code) and prompts (Codex) of the current scope. */
+  listCommands(): Promise<LegacyCommand[]>;
+  /** Makes a skill from a command. `removeOriginal` queues the file for deletion by the next apply. */
+  moveCommand(tool: CommandTool, name: string, removeOriginal: boolean): Promise<MoveCommandResult>;
   /** Global rule managed by Kitroom, or null if not managed. */
   getRule(): Promise<ManagedRule | null>;
   saveRule(rule: ManagedRule): Promise<ManagedRule>;
@@ -175,6 +179,8 @@ export const IPC = {
   importSkills: "forge:import-skills",
   saveSkill: "forge:save-skill",
   deleteSkill: "forge:delete-skill",
+  listCommands: "forge:list-commands",
+  moveCommand: "forge:move-command",
   getRule: "forge:get-rule",
   saveRule: "forge:save-rule",
   importRule: "forge:import-rule",

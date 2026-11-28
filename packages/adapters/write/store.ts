@@ -5,6 +5,7 @@
 //     source/skills/<name>/SKILL.md app-managed skills, in rulesync source format
 //     backups/<apply-id>/          originals saved before each apply + manifest.json
 //     state.json                   files currently owned by Kitroom (path → hash)
+//     retired.json                 command files moved into skills, removed on the next apply
 //     projects/<id>/               the same layout for one project (ctx.project set),
 //                                  plus project.json naming the project folder
 //
@@ -72,6 +73,7 @@ export function forgePaths(ctx: PathContext) {
     skills: join(scopeRoot, "source", "skills"),
     backups: join(scopeRoot, "backups"),
     state: join(scopeRoot, "state.json"),
+    retired: join(scopeRoot, "retired.json"),
   };
 }
 
@@ -203,12 +205,16 @@ function assertValidSkillName(name: string): void {
 
 /** Serializes to the rulesync skill format (SKILL.md with frontmatter). */
 export function toRulesyncSkill(skill: ManagedSkill): string {
-  const front = {
+  const front: Record<string, unknown> = {
     ...skill.extra,
     name: skill.name,
     description: skill.description,
     targets: skill.targets.map((t) => RULESYNC_TARGET[t]),
   };
+  // rulesync keeps `disable-model-invocation` at the top level (all tools) and
+  // Claude Code-only keys in the `claudecode` section.
+  if (skill.userOnly) front["disable-model-invocation"] = true;
+  if (skill.argumentHint) front.claudecode = { ...(front.claudecode as Record<string, unknown> | undefined), "argument-hint": skill.argumentHint };
   const body = skill.body.endsWith("\n") ? skill.body : `${skill.body}\n`;
   return `---\n${stringifyYaml(front)}---\n${body}`;
 }
@@ -224,17 +230,42 @@ export async function listSkills(ctx: PathContext): Promise<ManagedSkill[]> {
     if (text === null) continue;
     const { data, body } = splitFrontmatter(reader, path, text);
     const { name, description, targets, ...extra } = data;
+    const { userOnly, argumentHint } = takeEditableExtras(extra);
     const files = await bundledFiles(entry.path);
     out.push({
       name: str(name) ?? entry.name,
       description: str(description) ?? "",
       body,
       targets: (stringList(targets) ?? []).map((t) => RULESYNC_TO_TOOL[t]).filter((t): t is ToolId => Boolean(t)),
+      ...(userOnly ? { userOnly } : {}),
+      ...(argumentHint ? { argumentHint } : {}),
       ...(Object.keys(extra).length ? { extra } : {}),
       ...(files.length ? { files } : {}),
     });
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Moves the frontmatter values the form edits out of `extra` (in place). Values
+ * the form cannot show as they are (e.g. `disable-model-invocation: false`, a
+ * list-form `argument-hint`) stay in `extra` so they are kept unchanged.
+ */
+function takeEditableExtras(extra: Record<string, unknown>): { userOnly: boolean; argumentHint?: string } {
+  const userOnly = extra["disable-model-invocation"] === true;
+  if (userOnly) delete extra["disable-model-invocation"];
+  let argumentHint: string | undefined;
+  const claude = extra.claudecode;
+  if (claude && typeof claude === "object" && !Array.isArray(claude)) {
+    const section = { ...(claude as Record<string, unknown>) };
+    if (typeof section["argument-hint"] === "string" && section["argument-hint"].trim()) {
+      argumentHint = section["argument-hint"];
+      delete section["argument-hint"];
+      if (Object.keys(section).length) extra.claudecode = section;
+      else delete extra.claudecode;
+    }
+  }
+  return { userOnly, argumentHint };
 }
 
 /** Files in a skill folder besides SKILL.md, as sorted relative POSIX paths. */
@@ -251,6 +282,7 @@ async function bundledFiles(dir: string): Promise<string[]> {
 /**
  * Creates or updates a skill. Frontmatter extras and bundled files cannot be set
  * from the app: they are kept from the stored skill (and move with a rename).
+ * `userOnly` and `argumentHint` come from the form.
  */
 export async function saveSkill(ctx: PathContext, input: ManagedSkill, previousName?: string): Promise<ManagedSkill> {
   const stored = previousName === undefined ? undefined : (await listSkills(ctx)).find((s) => s.name === previousName);
@@ -264,6 +296,8 @@ export async function writeSkill(ctx: PathContext, input: ManagedSkill, previous
     description: input.description.trim(),
     body: input.body,
     targets: [...new Set(input.targets)].filter((t) => WRITABLE_AGENT_TOOLS.includes(t)),
+    ...(input.userOnly ? { userOnly: true } : {}),
+    ...(input.argumentHint?.trim() ? { argumentHint: input.argumentHint.trim() } : {}),
     ...(input.extra && Object.keys(input.extra).length ? { extra: input.extra } : {}),
   };
   assertValidSkillName(skill.name);
@@ -312,6 +346,34 @@ export async function readState(ctx: PathContext): Promise<ForgeState> {
 
 export async function writeState(ctx: PathContext, state: ForgeState): Promise<void> {
   await writeFileAtomic(forgePaths(ctx).state, `${JSON.stringify(state, null, 2)}\n`);
+}
+
+// ---------------------------------------------------------------------------
+// retired: command files moved into skills, deleted by the next apply
+
+export interface RetiredFile {
+  /** Absolute path of the original command file. */
+  path: string;
+  /** sha256 of its content when it was moved. A file edited since is left alone. */
+  hash: string;
+  /** The Kitroom skill it became. If that skill is gone, the file is kept. */
+  skill: string;
+  tool: ToolId;
+}
+
+export async function readRetired(ctx: PathContext): Promise<RetiredFile[]> {
+  try {
+    const parsed = JSON.parse(await readFile(forgePaths(ctx).retired, "utf8")) as { files?: RetiredFile[] };
+    return Array.isArray(parsed.files) ? parsed.files : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function writeRetired(ctx: PathContext, files: RetiredFile[]): Promise<void> {
+  const path = forgePaths(ctx).retired;
+  if (files.length === 0) await rm(path, { force: true });
+  else await writeFileAtomic(path, `${JSON.stringify({ files }, null, 2)}\n`);
 }
 
 export async function ensureForgeDirs(ctx: PathContext): Promise<void> {

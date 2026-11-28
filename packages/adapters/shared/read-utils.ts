@@ -6,6 +6,7 @@ import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
 import type {
   Agent,
+  Command,
   McpServer,
   McpTransport,
   ReadIssue,
@@ -249,6 +250,30 @@ export async function readMarkdownAgents(reader: Reader, dir: string, base: Sour
     });
   }
   return agents;
+}
+
+/**
+ * Custom commands / prompts: `*.md` files under a directory. Files in sub-folders
+ * are named `folder/name`. Frontmatter other than `description` is kept in `extra`.
+ */
+export async function readCommandsDir(reader: Reader, dir: string, base: SourceBase): Promise<Command[]> {
+  const commands: Command[] = [];
+  for (const path of await reader.filesWithSuffix(dir, ".md")) {
+    const text = await reader.text(path);
+    if (text === null) continue;
+    const { data, body } = splitFrontmatter(reader, path, text);
+    const src = { ...base, path };
+    commands.push({
+      kind: "command",
+      id: itemId(src),
+      name: relPosix(dir, path).replace(/\.md$/, ""),
+      description: str(data.description),
+      body,
+      extra: omit(data, ["description"]),
+      source: src,
+    });
+  }
+  return commands;
 }
 
 async function listSkillFiles(reader: Reader, skillDir: string, dir = skillDir, depth = 0, acc: string[] = []): Promise<string[]> {

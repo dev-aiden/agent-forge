@@ -1,4 +1,4 @@
-// Reads Codex CLI rules, agents, skills and MCP servers into the common model. Read-only.
+// Reads Codex CLI rules, agents, skills, custom prompts and MCP servers into the common model. Read-only.
 import { basename } from "node:path";
 import type { Agent, McpServer, Rule, Source, ToolConfig } from "@kitroom/model";
 import type { PathContext } from "../types";
@@ -6,6 +6,7 @@ import {
   byName,
   itemId,
   omit,
+  readCommandsDir,
   readRootRule,
   readSkillsDir,
   Reader,
@@ -95,6 +96,9 @@ export async function readCodex(ctx: PathContext): Promise<ToolConfig> {
     ...(hasProject ? await readSkillsDir(r, p.skillsDir, { ...md, scope: "project" }) : []),
   ];
 
+  // Custom prompts (global only; deprecated upstream in favor of skills).
+  const commands = await readCommandsDir(r, g.promptsDir, { ...md, scope: "global" });
+
   const mcpServers = [
     ...serversFromToml(await r.toml(g.config), source("codex", "global", g.config, "toml")),
     ...(hasProject ? serversFromToml(await r.toml(p.config), source("codex", "project", p.config, "toml")) : []),
@@ -105,6 +109,7 @@ export async function readCodex(ctx: PathContext): Promise<ToolConfig> {
     rules,
     agents: agents.sort(byName),
     skills: skills.sort(byName),
+    commands: commands.sort(byName),
     mcpServers: mcpServers.sort(byName),
     issues: r.issues,
   };

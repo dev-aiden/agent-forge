@@ -64,6 +64,8 @@ export function PreviewDialog({ set, busy, error, shortPath, onApply, onCancel }
                   return <p key={w.kind}>{t("preview.projectMcp")}</p>;
                 case "project-mcp-secrets":
                   return <p key={w.kind}>{t("preview.projectMcpSecrets", { names: w.names.join(", ") })}</p>;
+                case "moved-commands":
+                  return <p key={w.kind}>{t("preview.movedCommands", { paths: w.paths.map(shortPath).join(", ") })}</p>;
               }
             })}
             {set.blocked && <p className="text-red-300">{t(set.blocked === "inside-session" ? "preview.blockedSession" : "preview.blocked")}</p>}

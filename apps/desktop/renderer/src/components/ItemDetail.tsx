@@ -76,6 +76,9 @@ function fieldsOf(item: Item, t: T): [string, string][] {
     case "skill":
       rows.push([t("field.files"), item.files.length ? item.files.join("\n") : undefined], ...extra(item.extra));
       break;
+    case "command":
+      rows.push(...extra(item.extra));
+      break;
     case "mcp":
       rows.push(
         [t("field.transport"), item.transport],

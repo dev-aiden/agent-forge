@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Move old commands into skills: Claude Code custom commands (`~/.claude/commands`, `.claude/commands`) and Codex custom prompts (`~/.codex/prompts`) are listed under My skills and can become Kitroom skills. Deleting the original file is optional and happens on the next apply, with backup and undo.
+- Skill fields "Only when called by name" (`disable-model-invocation`; Codex: `allow_implicit_invocation: false`) and "Argument hint" (`argument-hint`, Claude Code).
+- Overview shows commands and prompts for Claude Code and Codex.
+
 ## [0.1.2]
 
 ### Added

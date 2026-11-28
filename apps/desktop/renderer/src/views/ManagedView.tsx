@@ -5,6 +5,7 @@ import { useApplyFlow } from "../apply-flow";
 import { Badge } from "../components/Badges";
 import { Field, TargetPicker, TOOL_LABEL } from "../components/Form";
 import { TemplatePicker } from "../components/TemplatePicker";
+import type { LegacyCommand } from "../../../shared/api";
 import { errorText } from "../format";
 import { useLang, useT } from "../i18n";
 
@@ -15,21 +16,25 @@ interface Draft {
   model: string;
   tools: string;
   targets: ToolId[];
+  /** Skills only. */
+  userOnly: boolean;
+  argumentHint: string;
 }
 
-const EMPTY: Draft = { name: "", description: "", body: "", model: "", tools: "", targets: [...WRITABLE_AGENT_TOOLS] };
+const EMPTY: Draft = { name: "", description: "", body: "", model: "", tools: "", targets: [...WRITABLE_AGENT_TOOLS], userOnly: false, argumentHint: "" };
 
 type Managed = ManagedAgent | ManagedSkill;
 
 function toDraft(a: Managed): Draft {
   const model = "model" in a ? (a.model ?? "") : "";
   const tools = "tools" in a ? (a.tools?.join(", ") ?? "") : "";
-  return { name: a.name, description: a.description, body: a.body, model, tools, targets: a.targets };
+  const skill = a as ManagedSkill;
+  return { name: a.name, description: a.description, body: a.body, model, tools, targets: a.targets, userOnly: skill.userOnly ?? false, argumentHint: skill.argumentHint ?? "" };
 }
 
 function fromDraft(kind: ManagedKind, d: Draft): Managed {
   const base = { name: d.name.trim(), description: d.description.trim(), body: d.body, targets: d.targets };
-  if (kind === "skill") return base;
+  if (kind === "skill") return { ...base, userOnly: d.userOnly || undefined, argumentHint: d.argumentHint.trim() || undefined };
   return {
     ...base,
     model: d.model.trim() || undefined,
@@ -101,18 +106,25 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
   const t = useT();
   const cfg = kindConfig(kind);
   const L = cfg.label;
-  const flow = useApplyFlow(shortPath);
+  // Applying can delete moved commands: reload the list afterwards.
+  const flow = useApplyFlow(shortPath, () => void refresh().catch((e) => flow.setError(errorText(e))));
   const [items, setItems] = useState<Managed[]>([]);
   /** null = new item */
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [saved, setSaved] = useState<Draft>(EMPTY);
   const [picking, setPicking] = useState(false);
+  /** Skills view: custom commands / prompts that can be moved into skills. */
+  const [commands, setCommands] = useState<LegacyCommand[]>([]);
+  const [moving, setMoving] = useState<LegacyCommand | null>(null);
   const lang = useLang();
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
 
-  const refresh = useCallback(async () => setItems(await cfg.list()), [kind]); // eslint-disable-line react-hooks/exhaustive-deps
+  const refresh = useCallback(async () => {
+    setItems(await cfg.list());
+    if (kind === "skill") setCommands(await window.kitroom.listCommands());
+  }, [kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     refresh().catch((e) => flow.setError(errorText(e)));
@@ -173,6 +185,29 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
       setDraft(d);
       setSaved(d);
       flow.setNotice({ text: t("agents.saved", { name: item.name }) });
+    } catch (e) {
+      flow.setError(errorText(e));
+    }
+  }
+
+  function startMove(c: LegacyCommand) {
+    if (dirty && !confirm(t("agents.discard"))) return;
+    flow.setError(null);
+    setMoving(c);
+  }
+
+  async function move(c: LegacyCommand, removeOriginal: boolean) {
+    setMoving(null);
+    try {
+      const r = await window.kitroom.moveCommand(c.tool, c.name, removeOriginal);
+      await refresh();
+      const d = toDraft(r.skill);
+      setEditing(r.skill.name);
+      setDraft(d);
+      setSaved(d);
+      flow.setNotice({
+        text: [t("commands.moved", { name: c.name }), t(r.removalPlanned ? "commands.movedRemove" : "commands.movedKeep")].join(" "),
+      });
     } catch (e) {
       flow.setError(errorText(e));
     }
@@ -240,6 +275,43 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
               </button>
             </li>
           ))}
+          {kind === "skill" && commands.length > 0 && (
+            <li className="border-t border-neutral-800">
+              <div className="px-3 pb-1 pt-3">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{t("commands.title")}</span>
+                <p className="mt-1 text-xs text-neutral-600">{t("commands.intro")}</p>
+              </div>
+              <ul>
+                {commands.map((c) => (
+                  <li key={`${c.tool}:${c.name}`} className="px-3 py-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-mono text-[13px] text-neutral-300" title={shortPath(c.path)}>
+                        {c.name}
+                      </span>
+                      <Badge className="border-neutral-700 text-neutral-400">{TOOL_LABEL[c.tool]}</Badge>
+                      {!c.verified && (
+                        <Badge className="border-rose-800 text-rose-300" title={t("badge.unverifiedTip")}>
+                          {t("badge.unverified")}
+                        </Badge>
+                      )}
+                    </div>
+                    {c.description && <div className="truncate text-xs text-neutral-500">{c.description}</div>}
+                    <div className="mt-1 text-xs">
+                      {c.removalPlanned ? (
+                        <span className="text-sky-300">{t("commands.removalPlanned")}</span>
+                      ) : c.blocked ? (
+                        <span className="text-neutral-500">{t(`commands.blocked.${c.blocked}`)}</span>
+                      ) : (
+                        <button className="btn" onClick={() => startMove(c)}>
+                          {t("commands.move")}
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          )}
         </ul>
         {flow.historyList}
       </aside>
@@ -267,6 +339,19 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
           <Field label={t("agents.applyTo")}>
             <TargetPicker value={draft.targets} onChange={(v) => set("targets", v)} />
           </Field>
+          {kind === "skill" && (
+            <div className="grid grid-cols-2 gap-4">
+              <Field label={t("skills.invocation")}>
+                <label className="flex items-center gap-2 text-sm" title={t("skills.userOnlyTip")}>
+                  <input type="checkbox" checked={draft.userOnly} onChange={(e) => set("userOnly", e.target.checked)} />
+                  {t("skills.userOnly")}
+                </label>
+              </Field>
+              <Field label={t("skills.argumentHint")} hint={t("skills.argumentHintHint")}>
+                <input className="input font-mono" value={draft.argumentHint} onChange={(e) => set("argumentHint", e.target.value)} placeholder="[issue-number]" />
+              </Field>
+            </div>
+          )}
           {kind === "agent" && (
             <div className="grid grid-cols-2 gap-4">
               <Field label={t("agents.model")} hint={t("agents.modelHint")}>
@@ -318,7 +403,49 @@ export function ManagedView({ kind, shortPath }: { kind: ManagedKind; shortPath(
       </section>
 
       {flow.dialog}
+      {moving && <MoveDialog command={moving} shortPath={shortPath} onMove={(remove) => void move(moving, remove)} onClose={() => setMoving(null)} />}
       {picking && <TemplatePicker kind={kind} onPick={pickTemplate} onClose={() => setPicking(false)} />}
+    </div>
+  );
+}
+
+/** Confirms moving a command into a skill, and whether to delete the original on the next apply. */
+function MoveDialog({
+  command: c,
+  shortPath,
+  onMove,
+  onClose,
+}: {
+  command: LegacyCommand;
+  shortPath(path: string): string;
+  onMove(removeOriginal: boolean): void;
+  onClose(): void;
+}) {
+  const t = useT();
+  const [removeOriginal, setRemoveOriginal] = useState(false);
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6" onClick={onClose}>
+      <div className="w-full max-w-md space-y-3 rounded-lg border border-neutral-800 bg-neutral-950 p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-medium text-neutral-100">{t("commands.dialogTitle", { name: c.name })}</h3>
+        <p className="break-all font-mono text-xs text-neutral-500">{shortPath(c.path)}</p>
+        <p className="text-xs text-neutral-400">{t(c.tool === "codex" ? "commands.dialogCodex" : "commands.dialogClaude")}</p>
+        {c.tool === "codex" && c.usesArguments && <p className="text-xs text-amber-300">{t("commands.argumentsWarning")}</p>}
+        <label className="flex items-start gap-2 text-sm text-neutral-200">
+          <input type="checkbox" className="mt-1" checked={removeOriginal} onChange={(e) => setRemoveOriginal(e.target.checked)} />
+          <span>
+            {t("commands.removeOriginal")}
+            <span className="block text-xs text-neutral-500">{t("commands.removeOriginalHint")}</span>
+          </span>
+        </label>
+        <div className="flex justify-end gap-2 pt-1">
+          <button className="btn" onClick={onClose}>
+            {t("action.cancel")}
+          </button>
+          <button className="btn-primary" onClick={() => onMove(removeOriginal)}>
+            {t("commands.move")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

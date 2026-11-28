@@ -1,4 +1,4 @@
-// IPC for app-managed items (agents, skills, global rule, MCP servers):
+// IPC for app-managed items (agents, skills, commands moved into skills, global rule, MCP servers):
 // store, import, preview, apply, undo, history.
 //
 // The renderer never sends paths or file contents to write. It asks for a
@@ -23,7 +23,9 @@ import {
   importRule,
   importSkills,
   listAgents,
+  listLegacyCommands,
   listSkills,
+  moveCommand,
   preview,
   readManagedMcp,
   readManagedRule,
@@ -144,6 +146,11 @@ export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean
   handle(IPC.importSkills, () => importSkills(ctx()));
   handle(IPC.saveSkill, (skill: ManagedSkill, previousName?: string) => saveSkill(ctx(), skill, previousName));
   handle(IPC.deleteSkill, (name: string) => deleteSkill(ctx(), name));
+  handle(IPC.listCommands, () => listLegacyCommands(ctx()));
+  // Tool + name only: the main process finds the file itself.
+  handle(IPC.moveCommand, (tool: "claude" | "codex", name: string, removeOriginal: boolean) =>
+    moveCommand(ctx(), tool, String(name), removeOriginal === true),
+  );
 
   handle(IPC.getRule, () => readManagedRule(ctx()));
   handle(IPC.saveRule, (rule: ManagedRule) => saveManagedRule(ctx(), rule));

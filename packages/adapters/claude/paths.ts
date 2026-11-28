@@ -24,6 +24,7 @@ export function claudePaths(ctx: PathContext) {
       agentsDir: join(g, "agents"),
       skillsDir: join(g, "skills"),
       syncedSkillsDir: join(g, "skills", "synced"),
+      /** unverified path: the docs name only project `.claude/commands` (commands are merged into skills). */
       commandsDir: join(g, "commands"),
       /** User-scope `mcpServers` and per-project (local scope) `projects[path].mcpServers`. */
       userJson: claudeUserJson(ctx),
@@ -53,7 +54,7 @@ function candidates(ctx: PathContext): Candidate[] {
     { kind: "agents", scope: "global", path: g.agentsDir, type: "dir", format: "markdown", count: "md" },
     { kind: "skills", scope: "global", path: g.skillsDir, type: "dir", format: "markdown", count: "skill" },
     { kind: "skills", scope: "global", path: g.syncedSkillsDir, type: "dir", format: "markdown", count: "skill-nested", note: "synced from claude.ai (managed by Claude)" },
-    { kind: "commands", scope: "global", path: g.commandsDir, type: "dir", format: "markdown", count: "md" },
+    { kind: "commands", scope: "global", path: g.commandsDir, type: "dir", format: "markdown", count: "md", note: "unverified path" },
     {
       kind: "mcp", scope: "global", path: g.userJson, type: "file", format: "json",
       extract: { type: "claude-user-json", project: ctx.project },

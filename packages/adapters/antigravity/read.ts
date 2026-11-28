@@ -47,5 +47,5 @@ export async function readAntigravity(ctx: PathContext): Promise<ToolConfig> {
       : []),
   ];
 
-  return { tool: "antigravity", rules, agents: agents.sort(byName), skills: skills.sort(byName), mcpServers: mcpServers.sort(byName), issues: r.issues };
+  return { tool: "antigravity", rules, agents: agents.sort(byName), skills: skills.sort(byName), commands: [], mcpServers: mcpServers.sort(byName), issues: r.issues };
 }

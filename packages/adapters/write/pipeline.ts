@@ -10,6 +10,9 @@
 // 3. undo:    restores the backup / runs the reverse commands. Anything the user
 //    changed after the apply is kept.
 //
+// Command files the user moved into skills (retired.json) are deleted by the
+// next apply, shown in the preview and backed up like any other change.
+//
 // Every file path is checked by `assertWritable` before it is written.
 import { createHash, randomUUID } from "node:crypto";
 import { copyFile, mkdir, mkdtemp, readFile, rm, rmdir, unlink } from "node:fs/promises";
@@ -38,8 +41,10 @@ import {
   listAgents,
   listBackupIds,
   listSkills,
+  readRetired,
   readState,
   writeFileAtomic,
+  writeRetired,
   writeState,
 } from "./store";
 
@@ -119,6 +124,11 @@ export type Warning =
       /** Literal secret values would be written into project files (often committed to git). */
       kind: "project-mcp-secrets";
       names: string[];
+    }
+  | {
+      /** Original files of commands moved into skills: they are deleted. */
+      kind: "moved-commands";
+      paths: string[];
     };
 
 export interface ChangeSet {
@@ -203,6 +213,15 @@ export function writableRoots(ctx: PathContext): string[] {
   return [claude.agentsDir, claude.skillsDir, codex.agentsDir, codex.skillsDir];
 }
 
+/**
+ * Command folders. Kitroom never generates files here; it only deletes a command
+ * the user moved into a skill (and restores it on undo).
+ */
+export function retirableRoots(ctx: PathContext): string[] {
+  if (isProject(ctx)) return [claudePaths(ctx).project.commandsDir];
+  return [claudePaths(ctx).global.commandsDir, codexPaths(ctx).global.promptsDir];
+}
+
 /** Individual shared files Kitroom may update (never delete). */
 export function writableFiles(ctx: PathContext): string[] {
   if (isProject(ctx)) {
@@ -230,7 +249,8 @@ export function assertWritable(ctx: PathContext, path: string): void {
   const abs = resolve(path);
   if (abs !== path) throw new Error(`refusing non-normalized path: ${path}`);
   if (isSensitive(abs)) throw new Error(`refusing to write credential file: ${abs}`);
-  const ok = writableFiles(ctx).includes(abs) || writableRoots(ctx).some((root) => inside(abs, root));
+  const ok =
+    writableFiles(ctx).includes(abs) || [...writableRoots(ctx), ...retirableRoots(ctx)].some((root) => inside(abs, root));
   if (!ok) throw new Error(`refusing to write outside tool config folders: ${abs}`);
   if (protectedDirs(ctx).some((dir) => abs === dir || inside(abs, dir))) {
     throw new Error(`refusing to write into a folder managed by another app: ${abs}`);
@@ -244,7 +264,7 @@ const isItemFile = (ctx: PathContext, path: string) => writableRoots(ctx).some((
  * including) the writable root, e.g. ~/.claude/skills/<name>/.
  */
 async function removeEmptyParents(ctx: PathContext, file: string): Promise<void> {
-  const roots = writableRoots(ctx);
+  const roots = [...writableRoots(ctx), ...retirableRoots(ctx)];
   let dir = dirname(file);
   while (roots.some((root) => inside(dir, root))) {
     try {
@@ -370,6 +390,19 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
       if (before === null || sha256(before) !== hash) continue;
       changes.push({ path, action: "delete", before, after: null, beforeHash: hash, unmanagedOverwrite: false, merged: false });
     }
+
+    // Commands moved into skills: delete the original while the skill still exists
+    // for that tool and the file is exactly as it was when moved.
+    const movedPaths: string[] = [];
+    for (const r of await readRetired(ctx)) {
+      if (produced.has(r.path) || changes.some((c) => c.path === r.path)) continue;
+      if (!skills.some((s) => s.name === r.skill && s.targets.includes(r.tool))) continue;
+      assertWritable(ctx, r.path);
+      const before = await readOrNull(r.path);
+      if (before === null || sha256(before) !== r.hash) continue;
+      changes.push({ path: r.path, action: "delete", before, after: null, beforeHash: r.hash, unmanagedOverwrite: false, merged: false });
+      movedPaths.push(r.path);
+    }
     changes.sort((a, b) => a.path.localeCompare(b.path));
 
     // MCP: Claude Code user scope through its CLI (project scope is the .mcp.json file),
@@ -401,6 +434,8 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
         if (literal.length) warnings.push({ kind: "project-mcp-secrets", names: literal });
       }
     }
+
+    if (movedPaths.length) warnings.push({ kind: "moved-commands", paths: movedPaths.sort() });
 
     if (rule?.targets.includes("codex") && (await readOrNull(codex.overrideRulesFile)) !== null) {
       warnings.push({ kind: "codex-rule-override", path: codex.overrideRulesFile });
@@ -533,6 +568,13 @@ export async function apply(ctx: PathContext, set: ChangeSet, runners: Pick<Pipe
   // Unchanged files produced by this apply are owned too.
   for (const c of set.changes) if (c.action === "unchanged" && c.after !== null) state.managed[c.path] = sha256(c.after);
   await writeState(ctx, state);
+
+  // A moved command is done once deleted; an undo brings the file back and keeps it.
+  const retired = await readRetired(ctx);
+  const deleted = new Set(entries.filter((e) => e.action === "delete").map((e) => e.path));
+  const left = [];
+  for (const r of retired) if (!deleted.has(r.path) && (await readOrNull(r.path)) !== null) left.push(r);
+  if (left.length !== retired.length) await writeRetired(ctx, left);
 
   return manifest;
 }

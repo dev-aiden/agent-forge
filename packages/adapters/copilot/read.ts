@@ -55,5 +55,5 @@ export async function readCopilot(ctx: PathContext): Promise<ToolConfig> {
       : []),
   ];
 
-  return { tool: "copilot", rules, agents: agents.sort(byName), skills: skills.sort(byName), mcpServers: mcpServers.sort(byName), issues: r.issues };
+  return { tool: "copilot", rules, agents: agents.sort(byName), skills: skills.sort(byName), commands: [], mcpServers: mcpServers.sort(byName), issues: r.issues };
 }

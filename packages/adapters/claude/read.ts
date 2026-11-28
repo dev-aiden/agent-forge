@@ -1,9 +1,10 @@
-// Reads Claude Code rules, agents, skills and MCP servers into the common model. Read-only.
+// Reads Claude Code rules, agents, skills, commands and MCP servers into the common model. Read-only.
 import type { McpServer, Rule, Source, ToolConfig } from "@kitroom/model";
 import type { PathContext } from "../types";
 import {
   byName,
   mcpFromJson,
+  readCommandsDir,
   readMarkdownAgents,
   readRootRule,
   readRulesDir,
@@ -51,6 +52,12 @@ export async function readClaude(ctx: PathContext): Promise<ToolConfig> {
     ...(hasProject ? await readSkillsDir(r, p.skillsDir, { ...md, scope: "project" }) : []),
   ];
 
+  const commands = [
+    // Not named in the official docs (only project .claude/commands is): unverified.
+    ...(await readCommandsDir(r, g.commandsDir, { ...md, scope: "global", verified: false })),
+    ...(hasProject ? await readCommandsDir(r, p.commandsDir, { ...md, scope: "project" }) : []),
+  ];
+
   const mcpServers: McpServer[] = [];
   // ~/.claude.json also stores account info; only the mcpServers keys are used.
   const userJson = (await r.json(g.userJson)) as Record<string, unknown> | undefined;
@@ -67,6 +74,7 @@ export async function readClaude(ctx: PathContext): Promise<ToolConfig> {
     rules,
     agents: agents.sort(byName),
     skills: skills.sort(byName),
+    commands: commands.sort(byName),
     mcpServers: mcpServers.sort(byName),
     issues: r.issues,
   };

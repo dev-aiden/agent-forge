@@ -60,6 +60,14 @@
 - 명시적인 빈 `tools: []`(도구 없음)는 생략(모든 도구)과 다르므로 `claudeExtra`로 보존
 - 같은 이름이 두 도구에서 다르면 Claude Code 쪽을 가져오고 알린다
 
+### 명령 → 스킬 옮기기 (`write/commands.ts`)
+- Claude Code는 커스텀 명령을 스킬로 합쳤고 Codex는 커스텀 프롬프트를 deprecated 했으므로, 명령을 별도 종류로 관리하지 않고 스킬로 옮기는 기능만 둔다 (#20)
+- 읽기: Claude `~/.claude/commands`(공식 문서에 없음 → `verified: false`)·`.claude/commands`, Codex `~/.codex/prompts`(전역만). 하위 폴더 명령·같은 이름 스킬·스킬이 못 지키는 frontmatter는 옮기지 않음
+- 옮기기는 Kitroom 원본만 만든다. 원래 파일 삭제는 사용자가 고른 경우 `retired.json`에 (경로, 해시, 스킬, 도구)로 남기고 다음 적용의 미리보기에 `delete`로 넣는다. 해시가 바뀌었거나 스킬이 없거나 그 도구를 대상으로 하지 않으면 지우지 않는다. 적용 후 목록에서 빼므로 되돌리기로 복구한 파일은 다시 지우지 않는다
+- 명령 폴더는 `retirableRoots`: 쓰기 허용(삭제·복구용)이지만 생성 대상 아님
+- Codex 프롬프트는 이름으로 부를 때만 쓰이므로 스킬로 옮길 때 `disable-model-invocation: true` (rulesync가 Codex `agents/openai.yaml`의 `allow_implicit_invocation: false`로 씀)
+- 스킬 화면의 "이름으로 부를 때만"·"인자 힌트"는 `extra`에서 꺼내 편집 가능 필드(`userOnly`·`argumentHint`)로 둔다. `false`나 목록형 값처럼 화면이 그대로 보여 줄 수 없는 값은 `extra`에 남겨 보존
+
 ### 비밀값
 - MCP의 env·headers·인자·URL 쿼리는 렌더러로 보낼 때 가린다. 가려진 값을 그대로 저장하면 원래 값 유지
 - 원본 `mcp.jsonc`와 백업은 0600. 프로젝트 `.mcp.json`에 값이 그대로 들어가면 미리보기에서 경고

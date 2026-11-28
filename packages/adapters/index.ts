@@ -64,3 +64,11 @@ export {
 } from "./write/import";
 export { displayChangeSet } from "./write/display";
 export { deleteAgent, deleteSkill, forgeHome, listAgents, migrateLegacyHome, listSkills, saveAgent, saveSkill, writeFileAtomic } from "./write/store";
+export {
+  listLegacyCommands,
+  moveCommand,
+  type CommandBlockReason,
+  type CommandTool,
+  type LegacyCommand,
+  type MoveCommandResult,
+} from "./write/commands";

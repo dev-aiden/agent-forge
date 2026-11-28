@@ -123,7 +123,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
 
   const allItems: Item[] = useMemo(() => {
     const c = tool?.config;
-    return c ? [...c.rules, ...c.agents, ...c.skills, ...c.mcpServers] : [];
+    return c ? [...c.rules, ...c.agents, ...c.skills, ...c.commands, ...c.mcpServers] : [];
   }, [tool]);
   const selected = allItems.find((i) => i.id === selectedId) ?? null;
 
@@ -236,7 +236,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
           <nav className="flex gap-1 border-b border-neutral-800 px-3">
             {visibleTools.map((x) => {
               const c = x.config;
-              const count = c ? c.rules.length + c.agents.length + c.skills.length + c.mcpServers.length : 0;
+              const count = c ? c.rules.length + c.agents.length + c.skills.length + c.commands.length + c.mcpServers.length : 0;
               const active = x.id === tool?.id;
               return (
                 <button
