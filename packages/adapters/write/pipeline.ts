@@ -35,7 +35,9 @@ import {
   type CommandChange,
 } from "./claude-mcp";
 import { readManagedMcp, readManagedRule } from "./config-store";
-import { claudeSettingsPath, patchClaudeSettings, readManagedPermissions, removedPermissions } from "./permissions";
+import { changedHookCommands, readStoredHooks } from "./claude-hooks";
+import { buildClaudeSettings, permissionListsOf } from "./claude-settings";
+import { claudeSettingsPath, readManagedPermissions, removedPermissions } from "./permissions";
 import {
   ensureForgeDirs,
   forgePaths,
@@ -135,6 +137,13 @@ export type Warning =
       /** Claude Code permission rules in settings.json that applying removes (not in Kitroom's lists). */
       kind: "removed-permissions";
       entries: string[];
+    }
+  | {
+      /** Hook commands Claude Code will run on its own that are new or changed. */
+      kind: "hook-commands";
+      commands: { event: string; command: string }[];
+      /** Written into the project's shared .claude/settings.json (teammates run them too). */
+      project: boolean;
     };
 
 export interface ChangeSet {
@@ -299,12 +308,13 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
   // rulesync writes paths relative to the user's home (global) or the project folder.
   const realRoot = project ? ctx.project : ctx.home;
   const state = await readState(ctx);
-  const [agents, skills, rule, mcp, permissions] = await Promise.all([
+  const [agents, skills, rule, mcp, permissions, hooks] = await Promise.all([
     listAgents(ctx),
     listSkills(ctx),
     readManagedRule(ctx),
     readManagedMcp(ctx),
     readManagedPermissions(ctx),
+    readStoredHooks(ctx),
   ]);
 
   const features: string[] = [];
@@ -368,6 +378,7 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
     const changes: Change[] = [];
     const produced = new Set<string>();
     let removedRules: string[] = [];
+    let generatedSettings: string | null = null;
 
     for (const rel of outputs) {
       const staged = resolve(stagingOut, rel);
@@ -375,16 +386,16 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
       const path = resolve(realRoot, rel);
       // Claude Code user MCP is applied through its CLI, never by writing ~/.claude.json.
       if (path === claudeUserJson) continue;
+      // settings.json is built below from permissions and hooks together.
+      if (path === settingsPath) {
+        generatedSettings = await readFile(staged, "utf8");
+        continue;
+      }
       assertWritable(ctx, path);
       produced.add(path);
 
       let after = await readFile(staged, "utf8");
       const before = await readOrNull(path);
-      // settings.json: only the permission lists change; the rest stays as the user wrote it.
-      if (path === settingsPath && permissions) {
-        after = patchClaudeSettings(before, after);
-        removedRules = removedPermissions(before, after);
-      }
       // Same frontmatter values and body, only formatted differently (key order, quotes):
       // keep the user's file as it is instead of rewriting it.
       if (before !== null && before !== after && isItemFile(ctx, path) && sameMarkdown(before, after)) after = before;
@@ -400,6 +411,33 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
         unmanagedOverwrite: !isMerged && before !== null && before !== after && state.managed[path] !== beforeHash,
         merged: isMerged,
       });
+    }
+
+    // Claude Code settings.json: only the permission lists and `hooks` change;
+    // everything else stays as the user wrote it (see claude-settings.ts).
+    let newHookCommands: { event: string; command: string }[] = [];
+    if (permissions || hooks) {
+      assertWritable(ctx, settingsPath);
+      const before = await readOrNull(settingsPath);
+      if (permissions && generatedSettings === null) throw new Error("rulesync did not produce Claude Code settings.json");
+      const after = buildClaudeSettings(before, {
+        permissions: permissions ? permissionListsOf(generatedSettings!) : undefined,
+        hooks: hooks ?? undefined,
+      });
+      if (after !== null) {
+        produced.add(settingsPath);
+        if (permissions) removedRules = removedPermissions(before, after);
+        if (hooks) newHookCommands = changedHookCommands(before === null ? {} : (JSON.parse(before) as { hooks?: unknown }).hooks, hooks);
+        changes.push({
+          path: settingsPath,
+          action: before === null ? "create" : before === after ? "unchanged" : "modify",
+          before,
+          after,
+          beforeHash: before === null ? null : sha256(before),
+          unmanagedOverwrite: false,
+          merged: true,
+        });
+      }
     }
 
     // Item files Kitroom wrote earlier that are no longer produced → remove them,
@@ -459,6 +497,7 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
 
     if (movedPaths.length) warnings.push({ kind: "moved-commands", paths: movedPaths.sort() });
     if (removedRules.length) warnings.push({ kind: "removed-permissions", entries: removedRules });
+    if (newHookCommands.length) warnings.push({ kind: "hook-commands", commands: newHookCommands, project });
 
     if (rule?.targets.includes("codex") && (await readOrNull(codex.overrideRulesFile)) !== null) {
       warnings.push({ kind: "codex-rule-override", path: codex.overrideRulesFile });

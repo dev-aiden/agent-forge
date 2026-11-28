@@ -46,6 +46,7 @@
 | 스킬 | `~/.claude/skills/<이름>/`, `~/.agents/skills/<이름>/` | `.claude/skills`, `.agents/skills` |
 | 규칙 | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` | `CLAUDE.md`, `AGENTS.md` |
 | 권한 | `~/.claude/settings.json` (Claude Code만, Codex는 #49) | `.claude/settings.json` |
+| hooks | `~/.claude/settings.json`의 `hooks` (Claude Code만, Codex는 #50) | `.claude/settings.json` |
 | MCP | Claude: 공식 CLI `claude mcp add-json - -s user`/`remove` (`~/.claude.json` 직접 쓰기 금지), Codex: `config.toml`의 MCP 부분만 | `.mcp.json`(파일로 직접), `.codex/config.toml` |
 
 - claude.ai 동기화 스킬(`~/.claude/skills/synced`)은 쓰기 금지, 이름 `synced` 예약
@@ -75,7 +76,14 @@
 - 실제 settings.json을 스테이징에 복사하고, rulesync 결과에서 allow/ask/deny 목록만 꺼내 원래 파일에 넣는다(`patchClaudeSettings`). rulesync가 더하는 `$schema`·정렬·모양 변경은 반영하지 않으며, 순서만 다르면 원래 파일 유지
 - 관리하는 도구(분류)의 규칙은 통째로 바뀌므로, Kitroom 목록에 없는 규칙이 지워지면 `removed-permissions` 경고. 가져오기는 rulesync가 다른 모양으로 쓰는 규칙(`Bash(*)`, `Write(…)`)·여러 목록 규칙과 그 도구의 규칙 전체를 남겨 둔다
 - 미리보기에서 settings.json의 `env` 값과 비밀값 같은 키는 가린다(`maskClaudeSettings`). `settings.local.json`·managed settings는 쓰지 않음
-- "Claude 설정" 탭은 Claude Code가 감지·사용 중일 때만 보인다. hooks(#19)·일반 설정(#22)이 이 탭에 이어서 들어갈 자리
+- "Claude 설정" 탭은 Claude Code가 감지·사용 중일 때만 보인다. 일반 설정(#22)이 이 탭에 이어서 들어갈 자리
+- settings.json은 `claude-settings.ts`의 `buildClaudeSettings` 한 곳에서 권한·hooks를 함께 만든다
+
+### Claude Code hooks (`write/claude-hooks.ts`) — rulesync를 쓰지 않음
+- 이유: rulesync(43.x)는 hook 명령을 다시 쓰고(`./x.sh` → `"$CLAUDE_PROJECT_DIR"/x.sh`) 관리하지 않는 이벤트를 지운다. hook은 자동 실행 명령이므로 사용자가 쓴 그대로 써야 한다. Claude 형식은 settings.json 모양 그대로라 변환도 필요 없다 (#19)
+- 원본 `source/claude-hooks.json`(0600)에 Claude `hooks` 객체를 그대로 저장. 가져온 직후 적용은 "이미 최신"
+- 화면은 command hook의 matcher·명령·timeout만 편집. 다른 종류(prompt/agent/http)와 추가 필드는 `ref`로 저장본에서 가져와 보존하고, 렌더러에는 가려서 보낸다(env·headers·url·비밀값 키)
+- 미리보기 경고 `hook-commands`: 새로 생기거나 바뀐 명령, 프로젝트면 팀원도 실행한다는 안내
 
 ### 비밀값
 - MCP의 env·headers·인자·URL 쿼리는 렌더러로 보낼 때 가린다. 가려진 값을 그대로 저장하면 원래 값 유지

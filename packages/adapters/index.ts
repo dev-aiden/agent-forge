@@ -80,3 +80,4 @@ export {
   type PermissionSkipReason,
   type PermissionsImportResult,
 } from "./write/permissions";
+export { importHooks, readManagedHooks, saveManagedHooks, unmanageHooks } from "./write/claude-hooks";

@@ -275,6 +275,47 @@ export interface ManagedPermissions {
 export const PERMISSION_ACTIONS = ["allow", "ask", "deny"] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
+/**
+ * One Claude Code hook as the app shows it. Fields the form does not edit are in
+ * `extra` (masked for display) and are kept from the stored hook on save via `ref`.
+ */
+export interface ClaudeHook {
+  /** "command", or another kind ("prompt", "agent", "http") kept read-only. */
+  type: string;
+  command?: string;
+  /** Seconds. */
+  timeout?: number;
+  extra?: Record<string, unknown>;
+  /** Opaque id of the stored hook this came from (keeps `extra` on save). */
+  ref?: string;
+}
+
+/** A matcher group: which tools (for tool events) and the hooks to run. */
+export interface ClaudeHookGroup {
+  /** Tool name pattern, e.g. "Bash" or "Edit|Write". Empty = every tool. */
+  matcher: string;
+  hooks: ClaudeHook[];
+  ref?: string;
+}
+
+/** Hooks by event name ("PreToolUse", "Stop", ...), in settings.json order. */
+export type ManagedHooks = Record<string, ClaudeHookGroup[]>;
+
+/** Claude Code hook events (code.claude.com/docs/en/hooks), most used first. */
+export const CLAUDE_HOOK_EVENTS: readonly string[] = [
+  "PreToolUse",
+  "PostToolUse",
+  "UserPromptSubmit",
+  "Stop",
+  "SubagentStop",
+  "Notification",
+  "SessionStart",
+  "SessionEnd",
+  "PreCompact",
+  "PermissionRequest",
+  "PostToolUseFailure",
+];
+
 /** Masks a managed MCP server for display (same rules as maskMcpServer). */
 export function maskManagedMcp(server: ManagedMcpServer): ManagedMcpServer {
   const maskRecord = (r?: Record<string, string>) =>

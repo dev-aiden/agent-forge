@@ -18,7 +18,7 @@ function galleryFiles(): Record<string, string> {
 test("every shipped template parses and has both languages", () => {
   const all = loadGallery(galleryFiles());
   const count = (k: string) => all.filter((t) => t.kind === k).length;
-  assert.ok(count("agent") >= 1 && count("skill") >= 1 && count("rule") >= 1 && count("mcp") >= 1 && count("permissions") >= 1);
+  assert.ok(count("agent") >= 1 && count("skill") >= 1 && count("rule") >= 1 && count("mcp") >= 1 && count("permissions") >= 1 && count("hook") >= 1);
   assert.equal(all.length, Object.keys(galleryFiles()).length, "every file is a template");
   for (const t of all) {
     assert.ok(t.title.ko && t.title.en && t.summary.ko && t.summary.en, t.id);

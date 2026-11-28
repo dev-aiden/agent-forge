@@ -7,6 +7,7 @@
 - Skill fields "Only when called by name" (`disable-model-invocation`; Codex: `allow_implicit_invocation: false`) and "Argument hint" (`argument-hint`, Claude Code).
 - Overview shows commands and prompts for Claude Code and Codex.
 - Claude settings → Permissions: manage Claude Code's allow / ask / deny rules in `settings.json` (global and project), import the current ones, add rules from templates. Only the permission lists change; other settings and secrets (masked in the preview) are kept. Claude Code only for now.
+- Claude settings → Hooks: manage Claude Code hooks (PreToolUse, PostToolUse, Stop, …) in `settings.json`. Imported and written exactly as they are (no command rewriting); only command hooks are editable, other kinds are kept. The preview lists new or changed commands and warns when they go into a shared project file. Templates: Prettier formatting, block `rm -rf`, notify when done (macOS / Linux).
 
 ## [0.1.2]
 

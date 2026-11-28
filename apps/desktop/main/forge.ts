@@ -1,5 +1,5 @@
 // IPC for app-managed items (agents, skills, commands moved into skills, global rule, MCP servers,
-// Claude Code permissions):
+// Claude Code permissions and hooks):
 // store, import, preview, apply, undo, history.
 //
 // The renderer never sends paths or file contents to write. It asks for a
@@ -10,7 +10,7 @@ import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { maskManagedMcp, type ManagedAgent, type ManagedMcpServer, type ManagedPermissions, type ManagedRule, type ManagedSkill } from "@kitroom/model";
+import { maskManagedMcp, type ManagedAgent, type ManagedHooks, type ManagedMcpServer, type ManagedPermissions, type ManagedRule, type ManagedSkill } from "@kitroom/model";
 import {
   apply,
   ConflictError,
@@ -20,6 +20,7 @@ import {
   displayChangeSet,
   history,
   importAgents,
+  importHooks,
   importMcp,
   importPermissions,
   importRule,
@@ -29,15 +30,18 @@ import {
   listSkills,
   moveCommand,
   preview,
+  readManagedHooks,
   readManagedMcp,
   readManagedPermissions,
   readManagedRule,
   saveAgent,
+  saveManagedHooks,
   saveManagedPermissions,
   saveManagedRule,
   saveMcpServer,
   saveSkill,
   undo,
+  unmanageHooks,
   unmanageMcp,
   unmanagePermissions,
   unmanageRule,
@@ -178,6 +182,11 @@ export function registerForgeIpc(trusted: (event: IpcMainInvokeEvent) => boolean
   handle(IPC.savePermissions, (p: ManagedPermissions) => saveManagedPermissions(ctx(), p));
   handle(IPC.importPermissions, () => importPermissions(ctx()));
   handle(IPC.unmanagePermissions, () => unmanagePermissions(ctx()));
+
+  handle(IPC.getHooks, () => readManagedHooks(ctx()));
+  handle(IPC.saveHooks, (h: ManagedHooks) => saveManagedHooks(ctx(), h));
+  handle(IPC.importHooks, () => importHooks(ctx()));
+  handle(IPC.unmanageHooks, () => unmanageHooks(ctx()));
 
   handle(IPC.previewApply, async () => {
     const c = ctx();

@@ -13,11 +13,11 @@ Kitroom never calls an AI API. Each official CLI keeps running on your own subsc
 ## Features
 
 - **Write once, apply to every tool** — agents, skills, top-level rules (`CLAUDE.md` / `AGENTS.md`) and MCP servers for Claude Code and Codex CLI, globally or for one project.
-- **Claude Code permissions** — edit the allow / ask / deny rules in `settings.json` as three lists, with templates such as "block destructive commands" and "protect secret files". Only the permission lists change; every other setting is kept.
+- **Claude Code permissions and hooks** — edit the allow / ask / deny rules and the hooks in `settings.json`, with templates such as "block destructive commands", "protect secret files", "format after edits" and "notify when done". Only those parts change; every other setting is kept, and hook commands are written exactly as you typed them.
 - **Move old commands into skills** — Claude Code custom commands and Codex custom prompts, which both tools now replace with skills, become skills in one click. Deleting the original file is optional and undoable.
 - **Preview every change** — see the exact diff before anything is written; originals are backed up and every apply can be undone.
 - **Import what you already have** — existing agents, skills, rules and MCP servers come in unchanged, including tool-specific fields and bundled skill files.
-- **Starter templates** — code reviewer, test writer, debugger, commit message, PR description, Playwright MCP, permission sets and more.
+- **Starter templates** — code reviewer, test writer, debugger, commit message, PR description, Playwright MCP, permission sets, hooks and more.
 - **Overview** — rules, agents, skills, commands and MCP servers of Claude Code, Codex CLI, Copilot CLI and Antigravity CLI in one place, with secrets masked.
 - **Terminal tabs** — run the installed CLIs and your shell inside the app.
 - **Local only** — no account, no server, no telemetry. The only network request is an optional check for new versions.
@@ -57,7 +57,7 @@ Full guide: **[English](docs/usage.md)** · **[한국어](docs/ko/사용법.md)*
 
 | Tool | View | Write |
 |---|---|---|
-| Claude Code | ✅ | ✅ agents, skills, rules, MCP, permissions |
+| Claude Code | ✅ | ✅ agents, skills, rules, MCP, permissions, hooks |
 | Codex CLI | ✅ | ✅ agents, skills, rules, MCP |
 | GitHub Copilot CLI | ✅ | — |
 | Antigravity CLI | ✅ | — |
@@ -67,7 +67,8 @@ Full guide: **[English](docs/usage.md)** · **[한국어](docs/ko/사용법.md)*
 - No AI API calls, no API key field.
 - CLI login, token and auth files are never read, copied or sent.
 - Every write shows a diff first and is backed up to `~/.kitroom/backups/`; undo is always available.
-- Secrets in MCP settings and in Claude Code `settings.json` (`env` and similar values) are masked in the UI.
+- Secrets in MCP settings and in Claude Code `settings.json` (`env`, hook headers and similar values) are masked in the UI.
+- Before applying hooks, the preview lists every command Claude Code will run on its own.
 - Network: only `GET https://api.github.com/repos/dev-aiden/kitroom/releases/latest` on launch, which can be turned off in Settings.
 
 Found a security problem? See [SECURITY.md](SECURITY.md).

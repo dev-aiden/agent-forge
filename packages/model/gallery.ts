@@ -6,10 +6,12 @@
 //   gallery/rules/<id>.md      frontmatter + a section to append to the top-level rules
 //   gallery/mcp/<name>.json    { title, summary, server }
 //   gallery/permissions/<id>.json  { title, summary, allow?, ask?, deny? } (Claude Code rules)
+//   gallery/hooks/<id>.json    { title, summary, event, matcher?, command, timeout? } (Claude Code hook)
 //
 // Frontmatter is a flat list of `key: value` lines (no YAML features), so the
 // parser stays small and runs in the renderer without dependencies.
 import {
+  CLAUDE_HOOK_EVENTS,
   MANAGED_NAME,
   PERMISSION_ACTIONS,
   RESERVED_SKILL_NAMES,
@@ -37,11 +39,12 @@ export type GalleryTemplate =
   | (TemplateMeta & { kind: "skill"; skill: Omit<ManagedSkill, "targets"> })
   | (TemplateMeta & { kind: "rule"; body: string })
   | (TemplateMeta & { kind: "mcp"; server: Omit<ManagedMcpServer, "targets" | "codexExtra"> })
-  | (TemplateMeta & { kind: "permissions"; permissions: ManagedPermissions });
+  | (TemplateMeta & { kind: "permissions"; permissions: ManagedPermissions })
+  | (TemplateMeta & { kind: "hook"; event: string; matcher: string; command: string; timeout?: number });
 
 export type GalleryKind = GalleryTemplate["kind"];
 
-const FOLDER_KIND: Record<string, GalleryKind> = { agents: "agent", skills: "skill", rules: "rule", mcp: "mcp", permissions: "permissions" };
+const FOLDER_KIND: Record<string, GalleryKind> = { agents: "agent", skills: "skill", rules: "rule", mcp: "mcp", permissions: "permissions", hooks: "hook" };
 
 /** `Tool` or `Tool(pattern)` (full checks against rulesync live in the adapters' tests). */
 const PERMISSION_RULE = /^[A-Za-z0-9_*-]+(\([\s\S]+\))?$/;
@@ -93,6 +96,25 @@ const stringRecord = (o: unknown, what: string): Record<string, string> | undefi
 
 /** Parses one template file. Throws with a short reason if it is malformed. */
 export function parseTemplate(kind: GalleryKind, id: string, text: string): GalleryTemplate {
+  if (kind === "hook") {
+    const j = JSON.parse(text) as Record<string, unknown>;
+    const unknownKeys = Object.keys(j).filter((k) => !["title", "summary", "event", "matcher", "command", "timeout"].includes(k));
+    if (unknownKeys.length) throw new Error(`unknown keys: ${unknownKeys.join(", ")}`);
+    if (typeof j.event !== "string" || !CLAUDE_HOOK_EVENTS.includes(j.event)) throw new Error(`unknown hook event: ${String(j.event)}`);
+    if (j.matcher !== undefined && typeof j.matcher !== "string") throw new Error("matcher must be a string");
+    if (typeof j.command !== "string" || !j.command.trim()) throw new Error("missing command");
+    if (j.timeout !== undefined && !(typeof j.timeout === "number" && j.timeout > 0)) throw new Error("timeout must be a positive number");
+    return {
+      kind,
+      id,
+      title: localized(j.title, "title"),
+      summary: localized(j.summary, "summary"),
+      event: j.event,
+      matcher: (j.matcher as string | undefined) ?? "",
+      command: j.command,
+      ...(typeof j.timeout === "number" ? { timeout: j.timeout } : {}),
+    };
+  }
   if (kind === "permissions") {
     const j = JSON.parse(text) as Record<string, unknown>;
     const unknownKeys = Object.keys(j).filter((k) => !["title", "summary", ...PERMISSION_ACTIONS].includes(k));

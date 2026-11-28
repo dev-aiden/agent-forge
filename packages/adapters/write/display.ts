@@ -64,8 +64,9 @@ export function maskMcpJson(text: string | null): string | null {
 const SETTINGS_SECRET_KEYS = new Set(["apiKeyHelper", "awsAuthRefresh", "awsCredentialExport", "otelHeadersHelper"]);
 
 /**
- * Masks Claude Code settings.json for display: `env` values and secret-looking
- * string values anywhere (by key name). Permission lists stay readable.
+ * Masks Claude Code settings.json for display: `env` / `headers` values, URL
+ * credentials and query values (http hooks), and secret-looking string values
+ * anywhere (by key name). Permission lists and hook commands stay readable.
  */
 export function maskClaudeSettings(text: string | null): string | null {
   if (text === null) return null;
@@ -74,7 +75,8 @@ export function maskClaudeSettings(text: string | null): string | null {
     if (v && typeof v === "object") {
       return Object.fromEntries(
         Object.entries(v).map(([k, x]) => {
-          if (k === "env") return [k, maskRecord(x)];
+          if (k === "env" || k === "headers") return [k, maskRecord(x)];
+          if (k === "url" && typeof x === "string") return [k, maskUrl(x)];
           if (typeof x === "string" && (SETTINGS_SECRET_KEYS.has(k) || SECRET_KEY.test(k))) return [k, MASK];
           return [k, walk(x, k)];
         }),

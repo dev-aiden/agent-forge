@@ -1,0 +1,12 @@
+{
+  "title": {
+    "en": "Notify when done (macOS)",
+    "ko": "끝나면 알림 (macOS)"
+  },
+  "summary": {
+    "en": "Shows a macOS notification when Claude finishes responding.",
+    "ko": "Claude가 응답을 마치면 macOS 알림을 띄웁니다."
+  },
+  "event": "Stop",
+  "command": "osascript -e 'display notification \"Claude Code finished\" with title \"Claude Code\"'"
+}

@@ -1,6 +1,6 @@
 // Types shared by main, preload and renderer. Keep this file free of runtime imports.
 import type { ChangeSet, CommandTool, ItemImportResult, LegacyCommand, McpImportResult, MoveCommandResult, PermissionsImportResult, RuleImportResult, UndoResult } from "@kitroom/adapters";
-import type { ManagedAgent, ManagedMcpServer, ManagedPermissions, ManagedRule, ManagedSkill, ToolConfig, ToolId } from "@kitroom/model";
+import type { ManagedAgent, ManagedHooks, ManagedMcpServer, ManagedPermissions, ManagedRule, ManagedSkill, ToolConfig, ToolId } from "@kitroom/model";
 
 export type { Change, ChangeSet, CommandBlockReason, CommandChange, CommandTool, ClaudeMcpDef, ImportSkipReason, LegacyCommand, MoveCommandResult, PermissionSkipReason, PermissionsImportResult, ItemImportResult, McpImportResult, RuleImportResult, UndoResult, Warning } from "@kitroom/adapters";
 
@@ -142,6 +142,14 @@ export interface KitroomApi {
   /** Stops managing permissions (settings.json is left as it is). */
   unmanagePermissions(): Promise<void>;
 
+  /** Claude Code hooks managed by Kitroom (extras masked), or null if not managed. */
+  getHooks(): Promise<ManagedHooks | null>;
+  /** Fields the form does not edit are kept from the stored hooks (by ref). */
+  saveHooks(hooks: ManagedHooks): Promise<ManagedHooks>;
+  /** Starts managing the scope's settings.json hooks, exactly as they are. */
+  importHooks(): Promise<{ events: number; hooks: number }>;
+  unmanageHooks(): Promise<void>;
+
   /** Computes changes without touching tool config. Secrets are masked. */
   previewApply(): Promise<ChangeSet>;
   /** Applies a preview made by the main process (by id only). */
@@ -202,6 +210,10 @@ export const IPC = {
   savePermissions: "forge:save-permissions",
   importPermissions: "forge:import-permissions",
   unmanagePermissions: "forge:unmanage-permissions",
+  getHooks: "forge:get-hooks",
+  saveHooks: "forge:save-hooks",
+  importHooks: "forge:import-hooks",
+  unmanageHooks: "forge:unmanage-hooks",
   previewApply: "forge:preview",
   apply: "forge:apply",
   undo: "forge:undo",

@@ -23,6 +23,8 @@ function previewText(t: GalleryTemplate): string {
       return t.body;
     case "mcp":
       return `${JSON.stringify(t.server, null, 2)}\n`;
+    case "hook":
+      return `${t.event}${t.matcher ? ` (${t.matcher})` : ""}${t.timeout ? `, timeout ${t.timeout}s` : ""}\n\n${t.command}\n`;
     case "permissions":
       return (["allow", "ask", "deny"] as const)
         .filter((a) => t.permissions[a].length)
@@ -54,7 +56,7 @@ export function TemplatePicker<K extends GalleryKind>({ kind, onPick, onClose }:
         <header className="flex items-center border-b border-neutral-800 px-5 py-3">
           <div>
             <h2 className="text-base font-semibold text-neutral-100">{t(`gallery.title.${kind}`)}</h2>
-            <p className="mt-0.5 text-xs text-neutral-500">{t(kind === "rule" ? "gallery.introRule" : kind === "permissions" ? "gallery.introPermissions" : "gallery.intro")}</p>
+            <p className="mt-0.5 text-xs text-neutral-500">{t(kind === "rule" ? "gallery.introRule" : kind === "permissions" || kind === "hook" ? "gallery.introPermissions" : "gallery.intro")}</p>
           </div>
           <button className="btn ml-auto" onClick={onClose}>
             {t("action.close")}
@@ -84,7 +86,7 @@ export function TemplatePicker<K extends GalleryKind>({ kind, onPick, onClose }:
               </pre>
               <footer className="flex justify-end border-t border-neutral-800 px-5 py-3">
                 <button className="btn-primary" onClick={() => onPick(current)}>
-                  {t(kind === "rule" || kind === "permissions" ? "gallery.append" : "gallery.use")}
+                  {t(kind === "rule" || kind === "permissions" || kind === "hook" ? "gallery.append" : "gallery.use")}
                 </button>
               </footer>
             </div>

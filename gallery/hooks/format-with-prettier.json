@@ -1,0 +1,14 @@
+{
+  "title": {
+    "en": "Format files after edits (Prettier)",
+    "ko": "편집 후 파일 포맷 (Prettier)"
+  },
+  "summary": {
+    "en": "After Claude edits or writes a file, runs the project's Prettier on it. Needs jq and Prettier installed in the project; does nothing otherwise.",
+    "ko": "Claude가 파일을 고치거나 만든 뒤 프로젝트의 Prettier로 정리합니다. jq와 프로젝트에 설치된 Prettier가 필요하며, 없으면 아무것도 하지 않습니다."
+  },
+  "event": "PostToolUse",
+  "matcher": "Edit|Write",
+  "command": "f=$(jq -r '.tool_input.file_path // empty'); if [ -n \"$f\" ] && [ -f \"$f\" ]; then npx --no-install prettier --write \"$f\" >/dev/null 2>&1 || true; fi",
+  "timeout": 60
+}

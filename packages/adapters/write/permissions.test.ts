@@ -11,12 +11,12 @@ import { nodeWorkerRunner } from "./node-runner";
 import {
   importPermissions,
   parsePermission,
-  patchClaudeSettings,
   permissionProblem,
   readManagedPermissions,
   saveManagedPermissions,
   unmanagePermissions,
 } from "./permissions";
+import { buildClaudeSettings } from "./claude-settings";
 import { apply, preview, undo, type PipelineRunners } from "./pipeline";
 
 let root: string, home: string, ctx: PathContext, settings: string;
@@ -158,9 +158,10 @@ test("managing no rules does not create settings.json", async () => {
   assert.deepEqual(await pending(), []);
 });
 
-test("patchClaudeSettings keeps the file when only the order differs", () => {
+test("buildClaudeSettings keeps the file when only the order differs", () => {
   const before = `{"permissions":{"allow":["B","A"]}}`;
-  assert.equal(patchClaudeSettings(before, `{"$schema":"x","permissions":{"allow":["A","B"]}}`), before);
+  assert.equal(buildClaudeSettings(before, { permissions: { allow: ["A", "B"], ask: [], deny: [] } }), before);
+  assert.equal(buildClaudeSettings(null, { permissions: { allow: [], ask: [], deny: [] } }), null);
 });
 
 test("every shipped permission template is written the way rulesync writes it", async () => {

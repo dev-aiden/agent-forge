@@ -123,7 +123,7 @@ Kitroom [Overview|Agents|Skills|Rules|MCP|Claude settings|Terminal]  Project: No
 | **Skills** | Create skills (`SKILL.md`) and apply them. |
 | **Rules** | Edit the top-level instructions every tool reads (`CLAUDE.md`, `AGENTS.md`) in one place. |
 | **MCP** | Manage one MCP server list and apply it. |
-| **Claude settings** | Claude Code `settings.json`: permission rules (allow / ask / deny). Shown when Claude Code is detected. |
+| **Claude settings** | Claude Code `settings.json`: permission rules (allow / ask / deny) and hooks. Shown when Claude Code is detected. |
 | **Terminal** | Run installed AI CLIs or your shell in tabs. |
 | **Project [Choose…]** | Pick a project folder to also see its settings and to write to that project only. |
 | **Settings** | Language, theme, which tools to show, and the new-version check. |
@@ -298,7 +298,7 @@ Good to know:
 
 > ⚠️ **If you started the app from inside Claude Code** (e.g. `npm run dev` in a Claude Code terminal), global Claude Code MCP changes are blocked, because Claude Code refuses registrations from inside its own session. Open the app normally instead.
 
-### 6-7. Claude settings (permissions)
+### 6-7. Claude settings (permissions, hooks)
 
 Claude Code's permission rules in `settings.json`: **Allow** runs a tool without asking, **Ask** always asks, **Deny** blocks it (Deny wins over Ask, Ask over Allow).
 
@@ -316,6 +316,20 @@ Claude Code's permission rules in `settings.json`: **Allow** runs a tool without
 - Import leaves some rules in `settings.json` untouched, with the reason shown: rules written in a form Kitroom would rewrite (e.g. `Bash(*)` is written as `Bash`, `Write(…)` as `Edit(…)`), rules in more than one list, and every other rule for the same tool.
 - `settings.local.json` and managed (organization) settings are never written.
 - Claude Code only for now. Codex permissions work differently (sandbox profiles) and are not written yet.
+
+#### Hooks
+
+Hooks are commands Claude Code runs on its own at certain moments: `PreToolUse` (before a tool runs; exit code 2 blocks it), `PostToolUse` (after it succeeds), `UserPromptSubmit`, `Stop` (when Claude finishes), `Notification`, `SessionStart`, and more. They are stored in the same `settings.json`.
+
+1. Open **Claude settings → Hooks** and choose `Start with my current hooks`. Hooks come in exactly as they are.
+2. Each event lists its groups: **Tools** (the matcher, e.g. `Bash` or `Edit|Write`; empty = all tools) and the commands with an optional timeout in seconds. Add a hook with the event picker, or use `Add from template` (format files with Prettier, block `rm -rf`, notify when done on macOS / Linux). Template descriptions say what the command needs (e.g. `jq`).
+3. `Save changes`, then `Preview & apply`. The preview lists every new or changed command Claude Code will run.
+
+- Hooks run commands without asking, with your permissions. Only add commands you understand. In a project, `.claude/settings.json` is usually committed, so teammates run them too; the preview says so.
+- Commands are written exactly as typed. Kitroom does not rewrite them.
+- Only command hooks can be edited. Other kinds (`prompt`, `agent`, `http`) and extra fields are kept exactly as they are and can be deleted. Their secret values (headers, tokens in URLs) are hidden in the app.
+- Only the `hooks` key changes; `disableAllHooks` and other settings stay as they are.
+- Claude Code only for now. Codex hooks work differently and are not written yet.
 
 ### 6-8. Terminal
 
@@ -350,7 +364,7 @@ Shortcuts (⌘ on macOS, Ctrl on Windows/Linux):
 
 | Tool | View | Write |
 |---|---|---|
-| Claude Code | ✅ | ✅ Agents, skills, rules, MCP, permissions (global and project) |
+| Claude Code | ✅ | ✅ Agents, skills, rules, MCP, permissions, hooks (global and project) |
 | Codex CLI | ✅ | ✅ Agents, skills, rules, MCP (global and project) |
 | Copilot CLI | ✅ | ❌ |
 | Antigravity CLI | ✅ | ❌ |

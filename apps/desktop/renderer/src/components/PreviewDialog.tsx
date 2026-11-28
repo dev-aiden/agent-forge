@@ -66,6 +66,20 @@ export function PreviewDialog({ set, busy, error, shortPath, onApply, onCancel }
                   return <p key={w.kind}>{t("preview.projectMcpSecrets", { names: w.names.join(", ") })}</p>;
                 case "removed-permissions":
                   return <p key={w.kind}>{t("preview.removedPermissions", { entries: w.entries.join(", ") })}</p>;
+                case "hook-commands":
+                  return (
+                    <div key={w.kind}>
+                      <p>{t("preview.hookCommands")}</p>
+                      <ul className="mt-1 space-y-0.5">
+                        {w.commands.map((c, i) => (
+                          <li key={i} className="break-all font-mono">
+                            {c.event}: {c.command}
+                          </li>
+                        ))}
+                      </ul>
+                      {w.project && <p className="mt-1">{t("preview.hookCommandsProject")}</p>}
+                    </div>
+                  );
                 case "moved-commands":
                   return <p key={w.kind}>{t("preview.movedCommands", { paths: w.paths.map(shortPath).join(", ") })}</p>;
               }

@@ -169,28 +169,6 @@ const sortedLists = (perms: unknown) => {
   return PERMISSION_ACTIONS.map((a) => (Array.isArray(p[a]) ? [...(p[a] as unknown[])].map(String).sort() : []));
 };
 
-/**
- * Takes only the allow / ask / deny lists from rulesync's settings.json and puts
- * them into the user's file. Everything else rulesync might change (formatting,
- * a `$schema` key) stays as the user had it. Same lists in another order = no change.
- */
-export function patchClaudeSettings(before: string | null, generated: string): string {
-  const lists = ((JSON.parse(generated) as { permissions?: Record<string, unknown> }).permissions ?? {}) as Record<string, unknown>;
-  const base = (before === null ? {} : JSON.parse(before)) as Record<string, unknown>;
-  const perms = { ...((base.permissions as Record<string, unknown> | undefined) ?? {}) };
-  for (const a of PERMISSION_ACTIONS) {
-    const v = lists[a];
-    if (Array.isArray(v) && v.length) perms[a] = v;
-    else delete perms[a];
-  }
-  if (before !== null && JSON.stringify(sortedLists(base.permissions)) === JSON.stringify(sortedLists(perms))) return before;
-  const next: Record<string, unknown> = { ...base, permissions: perms };
-  if (Object.keys(perms).length === 0) delete next.permissions;
-  // No rules and no file: nothing worth creating (the pipeline skips empty output).
-  if (before === null && Object.keys(next).length === 0) return "";
-  return `${JSON.stringify(next, null, 2)}\n`;
-}
-
 /** Entries in `before` that are not in `after` (removed by the apply). */
 export function removedPermissions(before: string | null, after: string | null): string[] {
   try {

@@ -1,0 +1,12 @@
+{
+  "title": {
+    "en": "Notify when done (Linux)",
+    "ko": "끝나면 알림 (Linux)"
+  },
+  "summary": {
+    "en": "Shows a desktop notification when Claude finishes responding. Needs notify-send (libnotify).",
+    "ko": "Claude가 응답을 마치면 데스크톱 알림을 띄웁니다. notify-send(libnotify)가 필요합니다."
+  },
+  "event": "Stop",
+  "command": "notify-send 'Claude Code' 'Claude Code finished'"
+}
