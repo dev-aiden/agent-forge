@@ -1,0 +1,8 @@
+{
+  "title": { "en": "Block destructive commands", "ko": "위험한 명령 막기" },
+  "summary": {
+    "en": "Never run commands that delete files recursively, use sudo, or rewrite git history (force push, hard reset).",
+    "ko": "파일을 통째로 지우거나, sudo를 쓰거나, git 기록을 덮어쓰는(force push, hard reset) 명령을 실행하지 않게 합니다."
+  },
+  "deny": ["Bash(rm -rf:*)", "Bash(sudo:*)", "Bash(git push --force:*)", "Bash(git push -f:*)", "Bash(git reset --hard:*)"]
+}

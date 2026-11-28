@@ -159,7 +159,9 @@ test("undo keeps files the user edited after the apply", async () => {
 test("never writes outside agent folders or to credential files", () => {
   assert.throws(() => assertWritable(ctx, join(toolHome(), ".codex", "auth.json")));
   assert.throws(() => assertWritable(ctx, join(toolHome(), ".claude.json")));
-  assert.throws(() => assertWritable(ctx, join(claudeAgents, "..", "settings.json")));
+  // settings.json is writable (permissions); the private settings.local.json never is.
+  assert.throws(() => assertWritable(ctx, join(claudeAgents, "..", "settings.local.json")));
+  assert.throws(() => assertWritable(ctx, join(claudeAgents, "..", "settings.json", "..", "x.json")));
   assert.throws(() => assertWritable(ctx, claudeAgents));
   assert.doesNotThrow(() => assertWritable(ctx, join(claudeAgents, "x.md")));
 });

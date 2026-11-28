@@ -5,10 +5,20 @@
 //   gallery/skills/<name>.md   frontmatter + SKILL.md body
 //   gallery/rules/<id>.md      frontmatter + a section to append to the top-level rules
 //   gallery/mcp/<name>.json    { title, summary, server }
+//   gallery/permissions/<id>.json  { title, summary, allow?, ask?, deny? } (Claude Code rules)
 //
 // Frontmatter is a flat list of `key: value` lines (no YAML features), so the
 // parser stays small and runs in the renderer without dependencies.
-import { MANAGED_NAME, RESERVED_SKILL_NAMES, type ManagedAgent, type ManagedMcpServer, type ManagedSkill, type McpTransport } from "./index";
+import {
+  MANAGED_NAME,
+  PERMISSION_ACTIONS,
+  RESERVED_SKILL_NAMES,
+  type ManagedAgent,
+  type ManagedMcpServer,
+  type ManagedPermissions,
+  type ManagedSkill,
+  type McpTransport,
+} from "./index";
 
 export interface Localized {
   en: string;
@@ -26,11 +36,15 @@ export type GalleryTemplate =
   | (TemplateMeta & { kind: "agent"; agent: Omit<ManagedAgent, "targets"> })
   | (TemplateMeta & { kind: "skill"; skill: Omit<ManagedSkill, "targets"> })
   | (TemplateMeta & { kind: "rule"; body: string })
-  | (TemplateMeta & { kind: "mcp"; server: Omit<ManagedMcpServer, "targets" | "codexExtra"> });
+  | (TemplateMeta & { kind: "mcp"; server: Omit<ManagedMcpServer, "targets" | "codexExtra"> })
+  | (TemplateMeta & { kind: "permissions"; permissions: ManagedPermissions });
 
 export type GalleryKind = GalleryTemplate["kind"];
 
-const FOLDER_KIND: Record<string, GalleryKind> = { agents: "agent", skills: "skill", rules: "rule", mcp: "mcp" };
+const FOLDER_KIND: Record<string, GalleryKind> = { agents: "agent", skills: "skill", rules: "rule", mcp: "mcp", permissions: "permissions" };
+
+/** `Tool` or `Tool(pattern)` (full checks against rulesync live in the adapters' tests). */
+const PERMISSION_RULE = /^[A-Za-z0-9_*-]+(\([\s\S]+\))?$/;
 
 const ALLOWED_KEYS: Record<"agent" | "skill" | "rule", readonly string[]> = {
   agent: ["name", "description", "model", "tools"],
@@ -79,6 +93,19 @@ const stringRecord = (o: unknown, what: string): Record<string, string> | undefi
 
 /** Parses one template file. Throws with a short reason if it is malformed. */
 export function parseTemplate(kind: GalleryKind, id: string, text: string): GalleryTemplate {
+  if (kind === "permissions") {
+    const j = JSON.parse(text) as Record<string, unknown>;
+    const unknownKeys = Object.keys(j).filter((k) => !["title", "summary", ...PERMISSION_ACTIONS].includes(k));
+    if (unknownKeys.length) throw new Error(`unknown keys: ${unknownKeys.join(", ")}`);
+    const permissions: ManagedPermissions = { allow: [], ask: [], deny: [] };
+    for (const a of PERMISSION_ACTIONS) {
+      const v = j[a] ?? [];
+      if (!Array.isArray(v) || v.some((e) => typeof e !== "string" || !PERMISSION_RULE.test(e))) throw new Error(`${a} must be a list of Tool(pattern) rules`);
+      permissions[a] = v as string[];
+    }
+    if (PERMISSION_ACTIONS.every((a) => permissions[a].length === 0)) throw new Error("no rules");
+    return { kind, id, title: localized(j.title, "title"), summary: localized(j.summary, "summary"), permissions };
+  }
   if (kind === "mcp") {
     const j = JSON.parse(text) as { title?: unknown; summary?: unknown; server?: Record<string, unknown> };
     const s = j.server ?? {};

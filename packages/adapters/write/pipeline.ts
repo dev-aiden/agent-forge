@@ -35,6 +35,7 @@ import {
   type CommandChange,
 } from "./claude-mcp";
 import { readManagedMcp, readManagedRule } from "./config-store";
+import { claudeSettingsPath, patchClaudeSettings, readManagedPermissions, removedPermissions } from "./permissions";
 import {
   ensureForgeDirs,
   forgePaths,
@@ -129,6 +130,11 @@ export type Warning =
       /** Original files of commands moved into skills: they are deleted. */
       kind: "moved-commands";
       paths: string[];
+    }
+  | {
+      /** Claude Code permission rules in settings.json that applying removes (not in Kitroom's lists). */
+      kind: "removed-permissions";
+      entries: string[];
     };
 
 export interface ChangeSet {
@@ -227,16 +233,21 @@ export function writableFiles(ctx: PathContext): string[] {
   if (isProject(ctx)) {
     const claude = claudePaths(ctx).project;
     const codex = codexPaths(ctx).project;
-    return [claude.rulesFile, codex.rulesFile, codex.config, claude.mcpJson];
+    return [claude.rulesFile, codex.rulesFile, codex.config, claude.mcpJson, claude.settings];
   }
   const claude = claudePaths(ctx).global;
   const codex = codexPaths(ctx).global;
-  return [claude.rulesFile, codex.rulesFile, codex.config];
+  return [claude.rulesFile, codex.rulesFile, codex.config, claude.settings];
 }
 
-/** Shared files rulesync merges into: the real file is staged first so other keys survive. */
-function mergedFiles(ctx: PathContext): string[] {
+/** Shared files rulesync merges MCP into: the real file is staged first so other keys survive. */
+function mcpMergedFiles(ctx: PathContext): string[] {
   return isProject(ctx) ? [codexPaths(ctx).project.config, claudePaths(ctx).project.mcpJson] : [codexPaths(ctx).global.config];
+}
+
+/** Every shared file rulesync merges into (MCP files and Claude Code settings.json). */
+function mergedFiles(ctx: PathContext): string[] {
+  return [...mcpMergedFiles(ctx), claudeSettingsPath(ctx)];
 }
 
 /** Folders inside writable roots that belong to someone else (e.g. claude.ai synced skills). */
@@ -288,11 +299,12 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
   // rulesync writes paths relative to the user's home (global) or the project folder.
   const realRoot = project ? ctx.project : ctx.home;
   const state = await readState(ctx);
-  const [agents, skills, rule, mcp] = await Promise.all([
+  const [agents, skills, rule, mcp, permissions] = await Promise.all([
     listAgents(ctx),
     listSkills(ctx),
     readManagedRule(ctx),
     readManagedMcp(ctx),
+    readManagedPermissions(ctx),
   ]);
 
   const features: string[] = [];
@@ -300,6 +312,11 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
   if (skills.length) features.push("skills");
   if (rule) features.push("rules");
   if (mcp) features.push("mcp");
+  const runs: { targets: string[]; features: string[] }[] = [];
+  if (features.length) runs.push({ targets: WRITABLE_AGENT_TOOLS.map((t) => RULESYNC_TARGET[t]), features });
+  // Claude Code only (see permissions.ts).
+  if (permissions) runs.push({ targets: [RULESYNC_TARGET.claude], features: ["permissions"] });
+  const settingsPath = claudeSettingsPath(ctx);
 
   // Generate into a staging home that rulesync treats as "~" (and a staging
   // project folder in project scope). Nothing real is written here.
@@ -313,23 +330,21 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
     if (project) await mkdir(stagingOut);
 
     let outputs: string[] = [];
-    if (features.length > 0) {
-      // rulesync merges MCP into shared files: give it the real ones so other keys survive.
-      if (mcp) {
-        for (const real of mergedFiles(ctx)) {
-          if ((await readOrNull(real)) === null) continue;
-          const staged = resolve(stagingOut, relative(realRoot, real));
-          await mkdir(dirname(staged), { recursive: true });
-          await copyFile(real, staged);
-        }
+    if (runs.length > 0) {
+      // rulesync merges into shared files: give it the real ones so other keys survive.
+      const staged = [...(mcp ? mcpMergedFiles(ctx) : []), ...(permissions ? [settingsPath] : [])];
+      for (const real of staged) {
+        if ((await readOrNull(real)) === null) continue;
+        const copy = resolve(stagingOut, relative(realRoot, real));
+        await mkdir(dirname(copy), { recursive: true });
+        await copyFile(real, copy);
       }
       const resultPath = join(stagingRoot, "result.json");
       const job = {
         stagingRoot,
         stagingHome,
         inputRoot: forge.source,
-        targets: WRITABLE_AGENT_TOOLS.map((t) => RULESYNC_TARGET[t]),
-        features,
+        runs,
         global: !project,
         outputRoot: stagingOut,
       };
@@ -352,6 +367,7 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
     const merged = new Set(mergedFiles(ctx));
     const changes: Change[] = [];
     const produced = new Set<string>();
+    let removedRules: string[] = [];
 
     for (const rel of outputs) {
       const staged = resolve(stagingOut, rel);
@@ -364,6 +380,11 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
 
       let after = await readFile(staged, "utf8");
       const before = await readOrNull(path);
+      // settings.json: only the permission lists change; the rest stays as the user wrote it.
+      if (path === settingsPath && permissions) {
+        after = patchClaudeSettings(before, after);
+        removedRules = removedPermissions(before, after);
+      }
       // Same frontmatter values and body, only formatted differently (key order, quotes):
       // keep the user's file as it is instead of rewriting it.
       if (before !== null && before !== after && isItemFile(ctx, path) && sameMarkdown(before, after)) after = before;
@@ -428,7 +449,8 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
       const codexUnmanaged = real.filter((n) => !known.has(n));
       if (codexUnmanaged.length) warnings.push({ kind: "unmanaged-mcp", tool: "codex", names: codexUnmanaged });
 
-      if (project && changes.some((c) => merged.has(c.path) && c.action !== "unchanged")) {
+      const mcpFiles = new Set(mcpMergedFiles(ctx));
+      if (project && changes.some((c) => mcpFiles.has(c.path) && c.action !== "unchanged")) {
         warnings.push({ kind: "project-mcp" });
         const literal = mcp.filter((s) => hasLiteralSecret(s.env) || hasLiteralSecret(s.headers)).map((s) => s.name);
         if (literal.length) warnings.push({ kind: "project-mcp-secrets", names: literal });
@@ -436,6 +458,7 @@ export async function preview(ctx: PathContext, runners: PipelineRunners): Promi
     }
 
     if (movedPaths.length) warnings.push({ kind: "moved-commands", paths: movedPaths.sort() });
+    if (removedRules.length) warnings.push({ kind: "removed-permissions", entries: removedRules });
 
     if (rule?.targets.includes("codex") && (await readOrNull(codex.overrideRulesFile)) !== null) {
       warnings.push({ kind: "codex-rule-override", path: codex.overrideRulesFile });

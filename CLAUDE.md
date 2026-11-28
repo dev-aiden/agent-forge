@@ -45,6 +45,7 @@
 | 에이전트 | `~/.claude/agents/*.md`, `~/.codex/agents/*.toml` | `.claude/agents`, `.codex/agents` |
 | 스킬 | `~/.claude/skills/<이름>/`, `~/.agents/skills/<이름>/` | `.claude/skills`, `.agents/skills` |
 | 규칙 | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` | `CLAUDE.md`, `AGENTS.md` |
+| 권한 | `~/.claude/settings.json` (Claude Code만, Codex는 #49) | `.claude/settings.json` |
 | MCP | Claude: 공식 CLI `claude mcp add-json - -s user`/`remove` (`~/.claude.json` 직접 쓰기 금지), Codex: `config.toml`의 MCP 부분만 | `.mcp.json`(파일로 직접), `.codex/config.toml` |
 
 - claude.ai 동기화 스킬(`~/.claude/skills/synced`)은 쓰기 금지, 이름 `synced` 예약
@@ -67,6 +68,14 @@
 - 명령 폴더는 `retirableRoots`: 쓰기 허용(삭제·복구용)이지만 생성 대상 아님
 - Codex 프롬프트는 이름으로 부를 때만 쓰이므로 스킬로 옮길 때 `disable-model-invocation: true` (rulesync가 Codex `agents/openai.yaml`의 `allow_implicit_invocation: false`로 씀)
 - 스킬 화면의 "이름으로 부를 때만"·"인자 힌트"는 `extra`에서 꺼내 편집 가능 필드(`userOnly`·`argumentHint`)로 둔다. `false`나 목록형 값처럼 화면이 그대로 보여 줄 수 없는 값은 `extra`에 남겨 보존
+
+### Claude Code 권한 (`write/permissions.ts`)
+- 원본 `source/permissions.jsonc`(rulesync 형식: 분류 → 패턴 → allow/ask/deny). 화면은 settings.json 모양(`Bash(git push:*)`)으로 주고받는다
+- rulesync `permissions`는 Claude Code 대상으로만 따로 실행(워커 `runs`). Codex 변환은 샌드박스 프로필(`default_permissions`)을 바꾸므로 실제 설치로 확인 전까지 쓰지 않음 (#49)
+- 실제 settings.json을 스테이징에 복사하고, rulesync 결과에서 allow/ask/deny 목록만 꺼내 원래 파일에 넣는다(`patchClaudeSettings`). rulesync가 더하는 `$schema`·정렬·모양 변경은 반영하지 않으며, 순서만 다르면 원래 파일 유지
+- 관리하는 도구(분류)의 규칙은 통째로 바뀌므로, Kitroom 목록에 없는 규칙이 지워지면 `removed-permissions` 경고. 가져오기는 rulesync가 다른 모양으로 쓰는 규칙(`Bash(*)`, `Write(…)`)·여러 목록 규칙과 그 도구의 규칙 전체를 남겨 둔다
+- 미리보기에서 settings.json의 `env` 값과 비밀값 같은 키는 가린다(`maskClaudeSettings`). `settings.local.json`·managed settings는 쓰지 않음
+- "Claude 설정" 탭은 Claude Code가 감지·사용 중일 때만 보인다. hooks(#19)·일반 설정(#22)이 이 탭에 이어서 들어갈 자리
 
 ### 비밀값
 - MCP의 env·headers·인자·URL 쿼리는 렌더러로 보낼 때 가린다. 가려진 값을 그대로 저장하면 원래 값 유지

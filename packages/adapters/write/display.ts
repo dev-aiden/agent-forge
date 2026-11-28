@@ -60,6 +60,35 @@ export function maskMcpJson(text: string | null): string | null {
   }
 }
 
+/** Settings keys whose values may hold secrets or run commands with secrets. */
+const SETTINGS_SECRET_KEYS = new Set(["apiKeyHelper", "awsAuthRefresh", "awsCredentialExport", "otelHeadersHelper"]);
+
+/**
+ * Masks Claude Code settings.json for display: `env` values and secret-looking
+ * string values anywhere (by key name). Permission lists stay readable.
+ */
+export function maskClaudeSettings(text: string | null): string | null {
+  if (text === null) return null;
+  const walk = (v: unknown, key = ""): unknown => {
+    if (Array.isArray(v)) return key === "allow" || key === "ask" || key === "deny" ? v : v.map((x) => walk(x));
+    if (v && typeof v === "object") {
+      return Object.fromEntries(
+        Object.entries(v).map(([k, x]) => {
+          if (k === "env") return [k, maskRecord(x)];
+          if (typeof x === "string" && (SETTINGS_SECRET_KEYS.has(k) || SECRET_KEY.test(k))) return [k, MASK];
+          return [k, walk(x, k)];
+        }),
+      );
+    }
+    return v;
+  };
+  try {
+    return `${JSON.stringify(walk(JSON.parse(text)), null, 2)}\n`;
+  } catch {
+    return "(hidden: could not parse this file to hide secrets)";
+  }
+}
+
 /**
  * Which masker a tool file needs, by name. The only config.toml Kitroom writes is
  * Codex's (its folder may be $CODEX_HOME), and the only .mcp.json is Claude Code's.
@@ -68,6 +97,7 @@ function maskerFor(path: string): ((text: string | null) => string | null) | nul
   const name = basename(path);
   if (name === "config.toml") return maskCodexConfig;
   if (name === ".mcp.json") return maskMcpJson;
+  if (name === "settings.json") return maskClaudeSettings;
   return null;
 }
 

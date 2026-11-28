@@ -1,0 +1,8 @@
+{
+  "title": { "en": "Allow read-only git", "ko": "읽기 전용 git 허용" },
+  "summary": {
+    "en": "Run git status, diff, log and show without asking. They only read the repository.",
+    "ko": "git status, diff, log, show를 묻지 않고 실행합니다. 저장소를 읽기만 하는 명령입니다."
+  },
+  "allow": ["Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git show:*)"]
+}

@@ -1,8 +1,8 @@
 // Types shared by main, preload and renderer. Keep this file free of runtime imports.
-import type { ChangeSet, CommandTool, ItemImportResult, LegacyCommand, McpImportResult, MoveCommandResult, RuleImportResult, UndoResult } from "@kitroom/adapters";
-import type { ManagedAgent, ManagedMcpServer, ManagedRule, ManagedSkill, ToolConfig, ToolId } from "@kitroom/model";
+import type { ChangeSet, CommandTool, ItemImportResult, LegacyCommand, McpImportResult, MoveCommandResult, PermissionsImportResult, RuleImportResult, UndoResult } from "@kitroom/adapters";
+import type { ManagedAgent, ManagedMcpServer, ManagedPermissions, ManagedRule, ManagedSkill, ToolConfig, ToolId } from "@kitroom/model";
 
-export type { Change, ChangeSet, CommandBlockReason, CommandChange, CommandTool, ClaudeMcpDef, ImportSkipReason, LegacyCommand, MoveCommandResult, ItemImportResult, McpImportResult, RuleImportResult, UndoResult, Warning } from "@kitroom/adapters";
+export type { Change, ChangeSet, CommandBlockReason, CommandChange, CommandTool, ClaudeMcpDef, ImportSkipReason, LegacyCommand, MoveCommandResult, PermissionSkipReason, PermissionsImportResult, ItemImportResult, McpImportResult, RuleImportResult, UndoResult, Warning } from "@kitroom/adapters";
 
 /** What the renderer sees of an apply (manifests hold secrets and stay in the main process). */
 export interface ApplySummary {
@@ -134,6 +134,14 @@ export interface KitroomApi {
   importMcp(): Promise<McpImportResult>;
   unmanageMcp(): Promise<void>;
 
+  /** Claude Code permission rules managed by Kitroom (current scope), or null if not managed. */
+  getPermissions(): Promise<ManagedPermissions | null>;
+  savePermissions(permissions: ManagedPermissions): Promise<ManagedPermissions>;
+  /** Starts managing the allow / ask / deny lists of the scope's Claude Code settings.json. */
+  importPermissions(): Promise<PermissionsImportResult>;
+  /** Stops managing permissions (settings.json is left as it is). */
+  unmanagePermissions(): Promise<void>;
+
   /** Computes changes without touching tool config. Secrets are masked. */
   previewApply(): Promise<ChangeSet>;
   /** Applies a preview made by the main process (by id only). */
@@ -190,6 +198,10 @@ export const IPC = {
   deleteMcp: "forge:delete-mcp",
   importMcp: "forge:import-mcp",
   unmanageMcp: "forge:unmanage-mcp",
+  getPermissions: "forge:get-permissions",
+  savePermissions: "forge:save-permissions",
+  importPermissions: "forge:import-permissions",
+  unmanagePermissions: "forge:unmanage-permissions",
   previewApply: "forge:preview",
   apply: "forge:apply",
   undo: "forge:undo",

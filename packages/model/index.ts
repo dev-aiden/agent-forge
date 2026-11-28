@@ -262,6 +262,19 @@ export interface ManagedRule {
   targets: ToolId[];
 }
 
+/**
+ * Claude Code permission rules managed by Kitroom, as written in settings.json:
+ * `Tool` or `Tool(pattern)`, e.g. `Bash(git push:*)`, `Read(./.env)`, `mcp__github__*`.
+ */
+export interface ManagedPermissions {
+  allow: string[];
+  ask: string[];
+  deny: string[];
+}
+
+export const PERMISSION_ACTIONS = ["allow", "ask", "deny"] as const;
+export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
+
 /** Masks a managed MCP server for display (same rules as maskMcpServer). */
 export function maskManagedMcp(server: ManagedMcpServer): ManagedMcpServer {
   const maskRecord = (r?: Record<string, string>) =>

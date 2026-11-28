@@ -9,10 +9,11 @@ import { I18nProvider, resolveLanguage, useLang, useT } from "./i18n";
 import { ThemeProvider, useResolvedTheme } from "./theme";
 import { ManagedView } from "./views/ManagedView";
 import { McpView } from "./views/McpView";
+import { ClaudeSettingsView } from "./views/ClaudeSettingsView";
 import { RulesView } from "./views/RulesView";
 import { TerminalView } from "./views/TerminalView";
 
-type View = "overview" | "agents" | "skills" | "rules" | "mcp" | "terminal";
+type View = "overview" | "agents" | "skills" | "rules" | "mcp" | "claude" | "terminal";
 
 export function App() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -151,7 +152,9 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
     }
   }
 
-  const views: View[] = ["overview", "agents", "skills", "rules", "mcp", "terminal"];
+  // Claude settings only when Claude Code is detected and not turned off.
+  const claudeShown = visibleTools.some((x) => x.id === "claude");
+  const views: View[] = ["overview", "agents", "skills", "rules", "mcp", ...(claudeShown ? (["claude"] as const) : []), "terminal"];
   const timeText = overview ? new Date(overview.readAt).toLocaleTimeString(lang) : "";
 
   return (
@@ -213,7 +216,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
       )}
       {error && <div className="border-b border-red-900 bg-red-950/50 px-4 py-2 text-xs text-red-300">{error}</div>}
 
-      {(view === "agents" || view === "skills" || view === "rules" || view === "mcp") && (
+      {(view === "agents" || view === "skills" || view === "rules" || view === "mcp" || view === "claude") && (
         <ScopeBar scope={scope} project={project ?? null} shortPath={homePath} onChange={changeScope} />
       )}
       {/* Keyed by scope and project so each one loads its own list. */}
@@ -221,6 +224,7 @@ function Main({ settings, onSettings }: { settings: AppSettings; onSettings(s: A
       {view === "skills" && <ManagedView key={`skill-${scope}-${project}`} kind="skill" shortPath={homePath} />}
       {view === "rules" && <RulesView key={`rules-${scope}-${project}`} shortPath={homePath} />}
       {view === "mcp" && <McpView key={`mcp-${scope}-${project}`} shortPath={homePath} />}
+      {view === "claude" && claudeShown && <ClaudeSettingsView key={`claude-${scope}-${project}`} shortPath={homePath} />}
 
       {/* Kept mounted so running CLIs survive switching views. */}
       <TerminalView

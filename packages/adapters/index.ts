@@ -72,3 +72,11 @@ export {
   type LegacyCommand,
   type MoveCommandResult,
 } from "./write/commands";
+export {
+  importPermissions,
+  readManagedPermissions,
+  saveManagedPermissions,
+  unmanagePermissions,
+  type PermissionSkipReason,
+  type PermissionsImportResult,
+} from "./write/permissions";

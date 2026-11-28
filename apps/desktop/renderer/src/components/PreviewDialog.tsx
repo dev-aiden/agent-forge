@@ -64,6 +64,8 @@ export function PreviewDialog({ set, busy, error, shortPath, onApply, onCancel }
                   return <p key={w.kind}>{t("preview.projectMcp")}</p>;
                 case "project-mcp-secrets":
                   return <p key={w.kind}>{t("preview.projectMcpSecrets", { names: w.names.join(", ") })}</p>;
+                case "removed-permissions":
+                  return <p key={w.kind}>{t("preview.removedPermissions", { entries: w.entries.join(", ") })}</p>;
                 case "moved-commands":
                   return <p key={w.kind}>{t("preview.movedCommands", { paths: w.paths.map(shortPath).join(", ") })}</p>;
               }
@@ -80,7 +82,9 @@ export function PreviewDialog({ set, busy, error, shortPath, onApply, onCancel }
                 <span className="truncate font-mono text-xs text-neutral-200">{shortPath(c.path)}</span>
                 <span className="ml-auto text-xs text-neutral-500">{open === c.path ? t("preview.hideDiff") : t("preview.showDiff")}</span>
               </button>
-              {c.merged && <p className="mt-2 text-xs text-sky-300">{t("preview.merged")}</p>}
+              {c.merged && (
+                <p className="mt-2 text-xs text-sky-300">{t(/[\\/]settings\.json$/.test(c.path) ? "preview.mergedSettings" : "preview.merged")}</p>
+              )}
               {c.unmanagedOverwrite && <p className="mt-2 text-xs text-amber-300">{t("preview.unmanaged")}</p>}
               {open === c.path && (
                 <div className="mt-2">

@@ -1,0 +1,8 @@
+{
+  "title": { "en": "Ask before pushing", "ko": "push 전에 묻기" },
+  "summary": {
+    "en": "Always ask before git push, even when other commands are allowed.",
+    "ko": "다른 명령을 허용해 두었더라도 git push 전에는 항상 묻게 합니다."
+  },
+  "ask": ["Bash(git push:*)"]
+}

@@ -113,7 +113,7 @@ New to these tools? Skip step 2 and start from a template.
 ## 4. The window
 
 ```
-Kitroom [Overview|Agents|Skills|Rules|MCP|Terminal]  Project: None (global only) [Choose…]   ● Read  [Refresh] [Settings]
+Kitroom [Overview|Agents|Skills|Rules|MCP|Claude settings|Terminal]  Project: None (global only) [Choose…]   ● Read  [Refresh] [Settings]
 ```
 
 | Menu | What it does |
@@ -123,6 +123,7 @@ Kitroom [Overview|Agents|Skills|Rules|MCP|Terminal]  Project: None (global only)
 | **Skills** | Create skills (`SKILL.md`) and apply them. |
 | **Rules** | Edit the top-level instructions every tool reads (`CLAUDE.md`, `AGENTS.md`) in one place. |
 | **MCP** | Manage one MCP server list and apply it. |
+| **Claude settings** | Claude Code `settings.json`: permission rules (allow / ask / deny). Shown when Claude Code is detected. |
 | **Terminal** | Run installed AI CLIs or your shell in tabs. |
 | **Project [Choose…]** | Pick a project folder to also see its settings and to write to that project only. |
 | **Settings** | Language, theme, which tools to show, and the new-version check. |
@@ -297,7 +298,26 @@ Good to know:
 
 > ⚠️ **If you started the app from inside Claude Code** (e.g. `npm run dev` in a Claude Code terminal), global Claude Code MCP changes are blocked, because Claude Code refuses registrations from inside its own session. Open the app normally instead.
 
-### 6-7. Terminal
+### 6-7. Claude settings (permissions)
+
+Claude Code's permission rules in `settings.json`: **Allow** runs a tool without asking, **Ask** always asks, **Deny** blocks it (Deny wins over Ask, Ask over Allow).
+
+| | Global | Project |
+|---|---|---|
+| Claude Code | `~/.claude/settings.json` | `<project>/.claude/settings.json` (shared with your team) |
+
+1. `Start with my current permissions` imports the lists from `settings.json`.
+2. Add or remove rules in the three lists, or use `Add from template` (block destructive commands, protect secret files, ask before pushing, allow read-only git). Templates only add rules; a rule already in another list stays there.
+3. `Save changes`, then `Preview & apply`.
+
+- Write rules as in `settings.json`: `Tool` or `Tool(pattern)`, e.g. `Bash(npm test:*)`, `Read(./.env)`, `WebFetch(domain:github.com)`, `mcp__github`.
+- Only the `allow` / `ask` / `deny` lists change. Every other setting in the file (model, env, hooks, `defaultMode`, …) and the file's formatting stay as they are. Values in `env` and other secret-looking values are hidden in the preview.
+- Kitroom replaces all rules of each tool it manages (Bash, Read, …) and keeps rules for other tools. If `settings.json` has a rule for a managed tool that is not in Kitroom's lists (e.g. Claude Code added it after "don't ask again"), the preview warns before it is removed.
+- Import leaves some rules in `settings.json` untouched, with the reason shown: rules written in a form Kitroom would rewrite (e.g. `Bash(*)` is written as `Bash`, `Write(…)` as `Edit(…)`), rules in more than one list, and every other rule for the same tool.
+- `settings.local.json` and managed (organization) settings are never written.
+- Claude Code only for now. Codex permissions work differently (sandbox profiles) and are not written yet.
+
+### 6-8. Terminal
 
 1. Click `+ Claude Code`, `+ Codex CLI`, `+ Shell`, … under `New tab`.
    - A greyed-out button means that CLI was not found on your PATH.
@@ -316,7 +336,7 @@ Shortcuts (⌘ on macOS, Ctrl on Windows/Linux):
 - Click `https://…` links in the output to open them in your browser.
 - When a program exits, a `Run again` button appears.
 
-### 6-8. Settings
+### 6-9. Settings
 
 - **Language**: system / 한국어 / English
 - **Theme**: system / light / dark
@@ -330,7 +350,7 @@ Shortcuts (⌘ on macOS, Ctrl on Windows/Linux):
 
 | Tool | View | Write |
 |---|---|---|
-| Claude Code | ✅ | ✅ Agents, skills, rules, MCP (global and project) |
+| Claude Code | ✅ | ✅ Agents, skills, rules, MCP, permissions (global and project) |
 | Codex CLI | ✅ | ✅ Agents, skills, rules, MCP (global and project) |
 | Copilot CLI | ✅ | ❌ |
 | Antigravity CLI | ✅ | ❌ |

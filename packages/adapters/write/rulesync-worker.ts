@@ -2,7 +2,8 @@
 // folder, so rulesync can only ever write inside that folder. The parent compares
 // the staged files with the real ones and applies them itself (with backups).
 //
-// Input:  KITROOM_JOB    JSON { stagingRoot, stagingHome, inputRoot, targets, features, global, outputRoot }
+// Input:  KITROOM_JOB    JSON { stagingRoot, stagingHome, inputRoot, runs: [{ targets, features }], global, outputRoot }
+//         Each run is one `generate` (features can need different targets).
 // Output: KITROOM_RESULT path of a JSON file to write { outputs: string[] }
 import { realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -13,8 +14,7 @@ interface Job {
   stagingRoot: string;
   stagingHome: string;
   inputRoot: string;
-  targets: string[];
-  features: string[];
+  runs: { targets: string[]; features: string[] }[];
   /** false = project mode: generate into `outputRoot` (a staging project folder). */
   global?: boolean;
   outputRoot?: string;
@@ -45,25 +45,29 @@ const global = job.global !== false;
 const outputRoot = global ? home : realpathSync(job.outputRoot ?? "");
 if (!inside(outputRoot, root)) fail("output folder is outside the staging root");
 
-const result = await generate({
-  global,
-  ...(global ? {} : { outputRoots: [outputRoot] }),
-  inputRoots: [job.inputRoot],
-  targets: job.targets as never,
-  features: job.features as never,
-  delete: false,
-  silent: true,
-});
-
-if (result.sourceLoadFailed) fail(`could not read source: ${result.sourceLoadFailedFeatures.join(", ")}`);
-
 // Paths are relative to the output root (the staging home or staging project).
-const outputs = [
-  ...result.rulesPaths,
-  ...result.mcpPaths,
-  ...result.subagentsPaths,
-  ...result.skillsPaths,
-  ...result.commandsPaths,
-];
-writeFileSync(resultPath, JSON.stringify({ outputs }));
+const outputs = new Set<string>();
+for (const run of job.runs) {
+  const result = await generate({
+    global,
+    ...(global ? {} : { outputRoots: [outputRoot] }),
+    inputRoots: [job.inputRoot],
+    targets: run.targets as never,
+    features: run.features as never,
+    delete: false,
+    silent: true,
+  });
+  if (result.sourceLoadFailed) fail(`could not read source: ${result.sourceLoadFailedFeatures.join(", ")}`);
+  for (const p of [
+    ...result.rulesPaths,
+    ...result.mcpPaths,
+    ...result.subagentsPaths,
+    ...result.skillsPaths,
+    ...result.commandsPaths,
+    ...result.permissionsPaths,
+  ]) {
+    outputs.add(p);
+  }
+}
+writeFileSync(resultPath, JSON.stringify({ outputs: [...outputs] }));
 process.exit(0);
