@@ -49,7 +49,8 @@ const pending = async () => (await preview(ctx, runners)).changes.filter((c) => 
 test("import keeps hooks exactly; applying right after changes nothing", async () => {
   await put(settings, USER_SETTINGS);
   assert.deepEqual(await importHooks(ctx), { events: 2, hooks: 3 });
-  assert.equal((await stat(hooksPath(ctx))).mode & 0o777, 0o600);
+  // Windows has no POSIX modes (same as the MCP file test).
+  if (process.platform !== "win32") assert.equal((await stat(hooksPath(ctx))).mode & 0o777, 0o600);
   assert.deepEqual(await pending(), []);
 });
 
