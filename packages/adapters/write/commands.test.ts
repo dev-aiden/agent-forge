@@ -20,7 +20,8 @@ async function put(path: string, content: string) {
   await writeFile(path, content);
 }
 const exists = (p: string) => stat(p).then(() => true, () => false);
-const rel = (p: string) => p.slice(home.length);
+/** Path below the fake HOME with "/" separators (Windows uses "\\"). */
+const rel = (p: string, base = home) => p.slice(base.length).replaceAll("\\", "/");
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "kitroom-commands-"));
@@ -131,7 +132,7 @@ test("project scope: a project command moves into the project's skills", async (
   ctx = { ...ctx, project };
   assert.deepEqual((await listLegacyCommands(ctx)).map((c) => c.name), ["deploy"]);
   await moveCommand(ctx, "claude", "deploy", true);
-  assert.deepEqual((await pending()).map((c) => `${c.action} ${c.path.slice(project.length)}`), [
+  assert.deepEqual((await pending()).map((c) => `${c.action} ${rel(c.path, project)}`), [
     "delete /.claude/commands/deploy.md",
     "create /.claude/skills/deploy/SKILL.md",
   ]);
@@ -145,9 +146,10 @@ test("skill form fields: only when called, argument hint", async () => {
   assert.equal(s!.extra, undefined);
 
   const changes = await pending();
-  const claude = changes.find((c) => c.path.endsWith("/.claude/skills/release/SKILL.md"))!.after!;
-  const codex = changes.find((c) => c.path.endsWith("/.agents/skills/release/SKILL.md"))!.after!;
-  const codexPolicy = changes.find((c) => c.path.endsWith("/.agents/skills/release/agents/openai.yaml"))!.after!;
+  const at = (suffix: string) => changes.find((c) => rel(c.path).endsWith(suffix))!.after!;
+  const claude = at("/.claude/skills/release/SKILL.md");
+  const codex = at("/.agents/skills/release/SKILL.md");
+  const codexPolicy = at("/.agents/skills/release/agents/openai.yaml");
   assert.match(claude, /disable-model-invocation: true/);
   assert.match(claude, /argument-hint: ['"]\[version\]['"]/);
   assert.match(codexPolicy, /allow_implicit_invocation: false/);

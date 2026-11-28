@@ -126,7 +126,7 @@ test("creates settings.json when missing; project scope writes .claude/settings.
   await put(join(project, ".claude/settings.local.json"), `{"permissions":{"allow":["Bash(ls:*)"]}}`);
   ctx = { ...ctx, project };
   await saveManagedPermissions(ctx, { allow: ["Bash(npm test:*)"], ask: [], deny: [] });
-  assert.deepEqual((await pending()).map((x) => x.path.slice(project.length)), ["/.claude/settings.json"]);
+  assert.deepEqual((await pending()).map((x) => x.path.slice(project.length).replaceAll("\\", "/")), ["/.claude/settings.json"]);
 });
 
 test("import skips entries it cannot keep, and every entry of their tool", async () => {
